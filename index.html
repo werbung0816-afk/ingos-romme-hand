@@ -711,12 +711,14 @@ header{
   background:rgba(2,10,4,.7);
   display:flex;align-items:center;justify-content:center;
   z-index:300;
-  opacity:0;pointer-events:none;
+  opacity:0;
+  pointer-events:none !important;  /* NEVER block clicks - always passthrough */
   transition:opacity .3s;
   backdrop-filter:blur(4px);
 }
 #modal-waiting-turn.open{
-  opacity:1;pointer-events:none;  /* keep none so touches pass through? No - block */
+  opacity:1;
+  pointer-events:none !important;
 }
 
 @media(max-width:480px){
@@ -1805,13 +1807,13 @@ function render() {
   // Waiting overlay (non-blocking display only)
   const wt = document.getElementById('modal-waiting-turn');
   const wtMsg = document.getElementById('waiting-msg');
+  // Waiting overlay - NEVER block pointer events
+  wt.style.pointerEvents = 'none';
   if (G.phase === 'playing' && !isMine) {
     wt.style.opacity = '1';
-    wt.style.pointerEvents = 'none'; // don't block touches
     if (wtMsg) wtMsg.textContent = `${G.playerNames[G.currentPlayer]} ist am Zug...`;
   } else {
     wt.style.opacity = '0';
-    wt.style.pointerEvents = 'none';
   }
 }
 
