@@ -1442,6 +1442,8 @@ function listenRoom() {
       }
 
       render();
+      // Schedule AI if current player is AI (host only)
+      if (isHost && G.phase === 'playing') scheduleAI();
 
       // Phase transitions (only on change)
       if (G.phase !== oldPhase) {
@@ -1504,6 +1506,110 @@ async function pushState() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// AI (runs on host only)
+// ═══════════════════════════════════════════════════════════
+let aiTimer = null;
+
+function scheduleAI() {
+  if (!isHost) return;
+  clearTimeout(aiTimer);
+  aiTimer = setTimeout(runAI, 900);
+}
+
+function aiGoOut(p, hand, dp, disc) {
+  let bestDiscard = null, bestPen = Infinity;
+  for (const c of hand) {
+    const rem = hand.filter(x => x.id !== c.id);
+    if (rem.length === HS) {
+      const p2 = pen(rem);
+      if (p2 < bestPen) { bestPen = p2; bestDiscard = c; }
+    }
+  }
+  if (!bestDiscard || bestPen > 0) return false;
+  const rem = hand.filter(x => x.id !== bestDiscard.id);
+  disc.push(bestDiscard);
+  const ns = [...G.scores];
+  for (let i = 0; i < NP; i++) {
+    if (!G.eliminated.includes(i) && i !== p) ns[i] += pen(fixArr(G.hands[i]));
+  }
+  G = { ...G,
+    hands: fixArrays(G.hands).map((h,i) => i === p ? rem : h),
+    drawPile: dp, discardPile: disc, scores: ns,
+    phase: 'roundEnd', roundWinner: p,
+    message: `${G.playerNames[p]} ist fertig!`, ts: Date.now()
+  };
+  render(); pushState(); showRoundEnd();
+  return true;
+}
+
+async function runAI() {
+  if (!G || G.phase !== 'playing' || !isHost) return;
+  const p = Number(G.currentPlayer);
+  // Only run for AI players (not human)
+  const snap = await roomRef.once('value');
+  const room = snap.val();
+  if (!room || !room.players) return;
+  const player = room.players[p];
+  if (!player || !player.ai) return; // human player - don't run AI
+
+  const hands = fixArrays(G.hands);
+  let dp = fixArr(G.drawPile);
+  let disc = fixArr(G.discardPile);
+  const hand = hands[p];
+  if (!hand) return;
+
+  // First player with 11 cards - just discard best
+  if (hand.length === HS + 1) {
+    if (aiGoOut(p, hand, dp, disc)) return;
+    const discard = aiBest(hand);
+    disc.push(discard);
+    const nh = hand.filter(c => c.id !== discard.id);
+    const nxt = nextAct(p, fixArr(G.eliminated), NP);
+    G = { ...G,
+      hands: hands.map((h,i) => i === p ? nh : h),
+      drawPile: dp, discardPile: disc,
+      currentPlayer: nxt, mustDiscard: false,
+      message: `${G.playerNames[nxt]} ist dran...`, ts: Date.now()
+    };
+    render(); await pushState(); scheduleAI(); return;
+  }
+
+  // Normal turn: draw
+  if (!dp.length) { const top = disc.pop(); dp = shuf(disc); disc = top ? [top] : []; }
+  const topDisc = disc[disc.length - 1];
+  let drawn;
+  // Decide: draw from discard or deck?
+  if (topDisc && !topDisc.j) {
+    const testHand = [...hand, topDisc];
+    if (pen(testHand) < pen(hand) + (topDisc ? cv(topDisc) : 99)) {
+      drawn = disc.pop();
+    } else {
+      drawn = dp.pop();
+    }
+  } else {
+    drawn = dp.pop();
+  }
+  if (!drawn) { render(); await pushState(); return; }
+  const nh = [...hand, drawn];
+
+  // Try to go out
+  if (aiGoOut(p, nh, dp, disc)) return;
+
+  // Discard best card
+  const discard = aiBest(nh);
+  disc.push(discard);
+  const finalHand = nh.filter(c => c.id !== discard.id);
+  const nxt = nextAct(p, fixArr(G.eliminated), NP);
+  G = { ...G,
+    hands: hands.map((h,i) => i === p ? finalHand : h),
+    drawPile: dp, discardPile: disc,
+    currentPlayer: nxt, mustDiscard: false,
+    message: `${G.playerNames[nxt]} ist dran...`, ts: Date.now()
+  };
+  render(); await pushState(); scheduleAI();
+}
+
+// ═══════════════════════════════════════════════════════════
 // PLAYER ACTIONS
 // ═══════════════════════════════════════════════════════════
 function myTurnCheck() {
@@ -1511,7 +1617,7 @@ function myTurnCheck() {
   return Number(G.currentPlayer) === Number(myIdx) && G.phase === 'playing';
 }
 
-function doDraw() {
+async function doDraw() {
   if (!myTurnCheck() || G.mustDiscard) return;
   if ((G.hands[myIdx]?.length || 0) >= 11) return;
   let dp = [...G.drawPile], disc = [...G.discardPile];
@@ -1524,7 +1630,7 @@ function doDraw() {
     drawPile: dp, discardPile: disc, mustDiscard: true,
     message: `${G.playerNames[myIdx]}: Karte gezogen — ablegen oder FERTIG!`, ts: Date.now()
   });
-  playDraw(); renderHandOnly(); pushState();
+  playDraw(); renderHandOnly(); await pushState();
 }
 
 function doDrawDiscard() {
@@ -1566,7 +1672,7 @@ async function doDiscard(cardId) {
     eliminated,
     message: `${G.playerNames[nxt]} ist dran...`, ts: Date.now()
   };
-  playDiscard(); render(); await pushState();
+  playDiscard(); render(); await pushState(); scheduleAI();
 }
 
 function tryGoOut() {
@@ -1649,7 +1755,7 @@ function endRound() {
   ns.totalPot = G.totalPot || NP * 2;
   G = ns; handOrder = null;
   const ce = document.getElementById('hand-cards'); if (ce) ce._dealt = false;
-  pushState(); render();
+  pushState(); render(); scheduleAI();
 }
 
 function doBuyIn(pi, yes) {
