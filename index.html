@@ -1925,8 +1925,9 @@ function showGameOver() {
 // ═══════════════════════════════════════════════════════════
 // EVENT LISTENERS
 // ═══════════════════════════════════════════════════════════
-window.addEventListener('load', () => {
+window.addEventListener('DOMContentLoaded', () => {
   initFirebase();
+  setupListeners();
   // Auto-join from URL
   const code = new URLSearchParams(location.search).get('join');
   if (code) {
@@ -1935,28 +1936,35 @@ window.addEventListener('load', () => {
   }
 });
 
-document.getElementById('btn-draw').addEventListener('click', doDraw);
-document.getElementById('btn-draw-disc').addEventListener('click', doDrawDiscard);
-document.getElementById('btn-fertig').addEventListener('click', tryGoOut);
-document.getElementById('btn-confirm-fertig').addEventListener('click', confirmGoOut);
-document.getElementById('btn-cancel-fertig').addEventListener('click', () => closeModal('modal-fertig'));
-document.getElementById('btn-next-round').addEventListener('click', endRound);
-document.getElementById('btn-new-game').addEventListener('click', () => {
-  closeModal('modal-gameover'); leaveRoom();
-});
-document.getElementById('btn-ssort').addEventListener('click', () => {
-  if (!G) return;
-  G = { ...G, hands: G.hands.map((h,i) => i===myIdx ? ssort(h) : h) };
-  handOrder = ssort(G.hands[myIdx]).map(c => c.id); renderHandOnly();
-});
-document.getElementById('btn-vsort').addEventListener('click', () => {
-  if (!G) return;
-  G = { ...G, hands: G.hands.map((h,i) => i===myIdx ? vsort(h) : h) };
-  handOrder = vsort(G.hands[myIdx]).map(c => c.id); renderHandOnly();
-});
-document.getElementById('host-name').addEventListener('keydown', e => { if(e.key==='Enter') createGame(); });
-document.getElementById('join-name').addEventListener('keydown', e => { if(e.key==='Enter') joinGame(); });
-document.getElementById('join-code').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase(); });
+function setupListeners() {
+  const on = (id, evt, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(evt, fn);
+    else console.warn('Element not found:', id);
+  };
+  on('btn-draw', 'click', doDraw);
+  on('btn-draw-disc', 'click', doDrawDiscard);
+  on('btn-fertig', 'click', tryGoOut);
+  on('btn-confirm-fertig', 'click', confirmGoOut);
+  on('btn-cancel-fertig', 'click', () => closeModal('modal-fertig'));
+  on('btn-next-round', 'click', endRound);
+  on('btn-new-game', 'click', () => { closeModal('modal-gameover'); leaveRoom(); });
+  on('btn-ssort', 'click', () => {
+    if (!G) return;
+    const hands = fixArrays(G.hands);
+    G = { ...G, hands: hands.map((h,i) => i===myIdx ? ssort(h) : h) };
+    handOrder = ssort(G.hands[myIdx]).map(c => c.id); renderHandOnly();
+  });
+  on('btn-vsort', 'click', () => {
+    if (!G) return;
+    const hands = fixArrays(G.hands);
+    G = { ...G, hands: hands.map((h,i) => i===myIdx ? vsort(h) : h) };
+    handOrder = vsort(G.hands[myIdx]).map(c => c.id); renderHandOnly();
+  });
+  on('host-name', 'keydown', e => { if(e.key==='Enter') createGame(); });
+  on('join-name', 'keydown', e => { if(e.key==='Enter') joinGame(); });
+  on('join-code', 'input', e => { e.target.value = e.target.value.toUpperCase(); });
+}
 </script>
 </body>
 </html>
