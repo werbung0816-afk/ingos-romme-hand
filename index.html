@@ -1569,46 +1569,51 @@ async function doDiscard(cardId) {
     dbg.style.display = 'block';
     dbg.textContent = `doDiscard: id=${cardId} cur=${G?.currentPlayer}(${typeof G?.currentPlayer}) myIdx=${myIdx}(${typeof myIdx}) must=${G?.mustDiscard} phase=${G?.phase}`;
   }
-  if (!G) return;
-  if (Number(G.currentPlayer) !== Number(myIdx)) return;
-  if (!G.mustDiscard) return;
-  if (G.phase === 'goOutDiscard') { doGoOutFinal(cardId); return; }
-  if (G.phase !== 'playing') return;
+  const dbg = document.getElementById('debug-bar');
+  function step(msg) { if(dbg) dbg.textContent = 'STEP: ' + msg; console.log('STEP:', msg); }
 
-  // Firebase may convert arrays to objects - normalize
+  step('checking G');
+  if (!G) { step('NO G'); return; }
+  step('checking currentPlayer='+G.currentPlayer+' myIdx='+myIdx);
+  if (Number(G.currentPlayer) !== Number(myIdx)) { step('NOT MY TURN'); return; }
+  step('checking mustDiscard='+G.mustDiscard);
+  if (!G.mustDiscard) { step('NOT MUST DISCARD'); return; }
+  step('checking phase='+G.phase);
+  if (G.phase === 'goOutDiscard') { doGoOutFinal(cardId); return; }
+  if (G.phase !== 'playing') { step('WRONG PHASE: '+G.phase); return; }
+
+  step('fixing arrays, G.hands type='+typeof G.hands+' isArray='+Array.isArray(G.hands));
   const hands = fixArrays(G.hands);
   const eliminated = fixArr(G.eliminated);
+  step('hands length='+hands.length+' myIdx='+myIdx);
   const h = hands[myIdx];
-  if (!h) { console.error('No hand for myIdx', myIdx, 'hands:', hands); return; }
+  if (!h) { step('NO HAND at myIdx='+myIdx); return; }
+  step('hand length='+h.length+' looking for id='+cardId);
   const c = h.find(x => Number(x.id) === cardId);
-  if (!c) { console.error('Card not found:', cardId, 'hand:', h); return; }
+  if (!c) { step('CARD NOT FOUND id='+cardId+' hand ids='+h.map(x=>x.id).join(',')); return; }
+  step('found card '+c.r+c.s+' filtering...');
   const nh = h.filter(x => Number(x.id) !== cardId);
   if (handOrder) handOrder = handOrder.filter(id => Number(id) !== cardId);
   const disc = [...fixArr(G.discardPile), c];
-  let nxt;
-  try {
-    nxt = nextAct(myIdx, eliminated, NP);
-  } catch(e) {
-    const dbg = document.getElementById('debug-bar');
-    if(dbg) dbg.textContent = 'nextAct ERROR: ' + e.message + ' myIdx='+myIdx+' elim='+JSON.stringify(eliminated)+' NP='+NP;
-    return;
-  }
+  step('calling nextAct myIdx='+myIdx+' NP='+NP+' eliminated='+JSON.stringify(eliminated));
+  const nxt = nextAct(myIdx, eliminated, NP);
+  step('nxt='+nxt+' building new state...');
   const newHands = hands.map((x,i) => i === myIdx ? nh : x);
-  const dbg2 = document.getElementById('debug-bar');
-  if(dbg2) dbg2.textContent = 'Discarding card '+cardId+', nxt='+nxt+', newHand len='+(nh.length);
   G = { ...G,
     hands: newHands,
     discardPile: disc, currentPlayer: nxt, mustDiscard: false,
     eliminated,
     message: `${G.playerNames[nxt]} ist dran...`, ts: Date.now()
   };
+  step('calling playDiscard+render...');
   playDiscard();
   render();
+  step('calling pushState...');
   try {
     await pushState();
+    step('SUCCESS! Card discarded.');
   } catch(e) {
-    const dbg = document.getElementById('debug-bar');
-    if(dbg) dbg.textContent = 'pushState ERROR: ' + e.message;
+    step('pushState ERROR: ' + e.message);
   }
 }
 
