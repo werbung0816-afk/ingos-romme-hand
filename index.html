@@ -1445,14 +1445,27 @@ function listenRoom() {
       }
 
       render();
-      // Schedule AI if current player is AI (host only)
+      // Schedule AI for AI players (host only)
       if (isHost && G.phase === 'playing') scheduleAI();
 
-      // Phase transitions (only on change)
+      // Phase transitions
       if (G.phase !== oldPhase) {
+        if (G.phase === 'roundEnd') { showRoundEnd(); }
+        else if (G.phase === 'buyIn') { showBuyIn(); }
+        else if (G.phase === 'gameOver') { showGameOver(); }
+        else if (G.phase === 'playing') {
+          // New round started - close all modals
+          closeModal('modal-round');
+          closeModal('modal-buyin');
+          const ce = document.getElementById('hand-cards');
+          if (ce) ce._dealt = false;
+        }
+      }
+      // Also show modals if we join mid-phase
+      if (!oldPhase) {
         if (G.phase === 'roundEnd') showRoundEnd();
-        if (G.phase === 'buyIn') showBuyIn();
-        if (G.phase === 'gameOver') showGameOver();
+        else if (G.phase === 'buyIn') showBuyIn();
+        else if (G.phase === 'gameOver') showGameOver();
       }
 
       // Turn notification
@@ -1514,10 +1527,9 @@ async function pushState() {
 let aiTimer = null;
 
 function scheduleAI() {
-  if (!isHost) return;
+  if (!isHost || !G || G.phase !== 'playing') return;
   clearTimeout(aiTimer);
-  // Check if current player is AI
-  const p = G ? Number(G.currentPlayer) : -1;
+  const p = Number(G.currentPlayer);
   const player = roomPlayers[p];
   if (player && player.ai) {
     aiTimer = setTimeout(runAI, 800);
@@ -1551,7 +1563,8 @@ function aiGoOut(p, hand, dp, disc) {
 }
 
 async function runAI() {
-  if (!G || G.phase !== 'playing' || !isHost) return;
+  if (!isHost || !G || G.phase !== 'playing') return;
+  clearTimeout(aiTimer); // prevent double-run
   const p = Number(G.currentPlayer);
   // Only run for AI players
   const player = roomPlayers[p];
@@ -1738,7 +1751,7 @@ function doGoOutFinal(cardId) {
 // ═══════════════════════════════════════════════════════════
 function endRound() {
   closeModal('modal-round');
-  if (!isHost) return;
+  if (!isHost) return; // non-host just closes modal, host manages state
   const ne = [...G.eliminated];
   const needed = [];
   for (let p = 0; p < NP; p++) {
