@@ -947,6 +947,38 @@ const HS = 10;
 const AI_NAMES = ['Dani','Holly','Julia','Joschi','Harry','Wurstsalat'];
 
 // ═══════════════════════════════════════════════════════════
+// FIREBASE ARRAY HELPERS
+// Firebase converts arrays to objects when keys are numeric.
+// These helpers normalize Firebase data back to proper arrays.
+// ═══════════════════════════════════════════════════════════
+function fixArr(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  // Firebase object: {0: x, 1: y} -> [x, y]
+  return Object.keys(val).sort((a,b) => Number(a)-Number(b)).map(k => val[k]);
+}
+function fixArrays(hands) {
+  if (!hands) return [];
+  const arr = fixArr(hands);
+  return arr.map(h => fixArr(h));
+}
+function fixGameState(gs) {
+  if (!gs) return gs;
+  return {
+    ...gs,
+    hands: fixArrays(gs.hands),
+    drawPile: fixArr(gs.drawPile),
+    discardPile: fixArr(gs.discardPile),
+    eliminated: fixArr(gs.eliminated),
+    buyInPending: fixArr(gs.buyInPending),
+    validDiscardIds: fixArr(gs.validDiscardIds),
+    scores: fixArr(gs.scores),
+    playerNames: fixArr(gs.playerNames),
+    contributions: fixArr(gs.contributions),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
 // CORE GAME LOGIC (proven, from single-player)
 // ═══════════════════════════════════════════════════════════
 function mkDeck(){
@@ -1411,12 +1443,13 @@ function listenRoom() {
         else if (isHost) myIdx = 0;
         NP = room.NP || NP;
       }
-      const newState = room.gameState;
-      const isNew = !G || newState.ts > (G.ts || 0);
+      const rawState = room.gameState;
+      const isNew = !G || rawState.ts > (G.ts || 0);
       if (!isNew) return;
 
       const oldPhase = G ? G.phase : null;
-      G = JSON.parse(JSON.stringify(newState));
+      // Fix Firebase array-to-object conversion
+      G = fixGameState(JSON.parse(JSON.stringify(rawState)));
 
       // Show game screen if not already
       if (document.getElementById('screen-game').style.display !== 'flex') {
@@ -1506,11 +1539,11 @@ function doDraw() {
   if (!dp.length) { showToast('Keine Karten mehr!'); return; }
   const card = dp.pop();
   const nh = ssort([...G.hands[myIdx], card]);
-  G = { ...G,
-    hands: G.hands.map((h,i) => i === myIdx ? nh : h),
+  G = fixGameState({ ...G,
+    hands: fixArrays(G.hands).map((h,i) => i === myIdx ? nh : h),
     drawPile: dp, discardPile: disc, mustDiscard: true,
     message: `${G.playerNames[myIdx]}: Karte gezogen — ablegen oder FERTIG!`, ts: Date.now()
-  };
+  });
   playDraw(); renderHandOnly(); pushState();
 }
 
@@ -1529,7 +1562,7 @@ function doDrawDiscard() {
   playDraw(); renderHandOnly(); pushState();
 }
 
-function doDiscard(cardId) {
+async function doDiscard(cardId) {
   cardId = Number(cardId);
   const dbg = document.getElementById('debug-bar');
   if (dbg) {
@@ -1542,19 +1575,41 @@ function doDiscard(cardId) {
   if (G.phase === 'goOutDiscard') { doGoOutFinal(cardId); return; }
   if (G.phase !== 'playing') return;
 
-  const h = G.hands[myIdx];
+  // Firebase may convert arrays to objects - normalize
+  const hands = fixArrays(G.hands);
+  const eliminated = fixArr(G.eliminated);
+  const h = hands[myIdx];
+  if (!h) { console.error('No hand for myIdx', myIdx, 'hands:', hands); return; }
   const c = h.find(x => Number(x.id) === cardId);
-  if (!c) return;
+  if (!c) { console.error('Card not found:', cardId, 'hand:', h); return; }
   const nh = h.filter(x => Number(x.id) !== cardId);
   if (handOrder) handOrder = handOrder.filter(id => Number(id) !== cardId);
-  const disc = [...G.discardPile, c];
-  const nxt = nextAct(myIdx, G.eliminated.map(Number), NP);
+  const disc = [...fixArr(G.discardPile), c];
+  let nxt;
+  try {
+    nxt = nextAct(myIdx, eliminated, NP);
+  } catch(e) {
+    const dbg = document.getElementById('debug-bar');
+    if(dbg) dbg.textContent = 'nextAct ERROR: ' + e.message + ' myIdx='+myIdx+' elim='+JSON.stringify(eliminated)+' NP='+NP;
+    return;
+  }
+  const newHands = hands.map((x,i) => i === myIdx ? nh : x);
+  const dbg2 = document.getElementById('debug-bar');
+  if(dbg2) dbg2.textContent = 'Discarding card '+cardId+', nxt='+nxt+', newHand len='+(nh.length);
   G = { ...G,
-    hands: G.hands.map((x,i) => i === myIdx ? nh : x),
+    hands: newHands,
     discardPile: disc, currentPlayer: nxt, mustDiscard: false,
+    eliminated,
     message: `${G.playerNames[nxt]} ist dran...`, ts: Date.now()
   };
-  playDiscard(); render(); pushState();
+  playDiscard();
+  render();
+  try {
+    await pushState();
+  } catch(e) {
+    const dbg = document.getElementById('debug-bar');
+    if(dbg) dbg.textContent = 'pushState ERROR: ' + e.message;
+  }
 }
 
 function tryGoOut() {
@@ -1754,9 +1809,9 @@ function render() {
   // Scores
   const scoresEl = document.getElementById('scores');
   scoresEl.innerHTML = '';
-  G.playerNames.forEach((name, i) => {
+  fixArr(G.playerNames).forEach((name, i) => {
     if (!name) return;
-    if (G.eliminated?.includes(i)) return;
+    if (fixArr(G.eliminated).includes(i)) return;
     const active = Number(G.currentPlayer) === i && G.phase === 'playing';
     const pct = Math.min(100, (G.scores[i]||0) / MAX * 100);
     const div = document.createElement('div');
@@ -1773,8 +1828,8 @@ function render() {
   // Opponents
   const oppsEl = document.getElementById('opps');
   oppsEl.innerHTML = '';
-  G.playerNames.forEach((name, p) => {
-    if (p === myIdx || G.eliminated?.includes(p)) return;
+  fixArr(G.playerNames).forEach((name, p) => {
+    if (p === myIdx || fixArr(G.eliminated).includes(p)) return;
     const div = document.createElement('div');
     div.className = 'opp';
     div.innerHTML = `<div class="opp-hdr">
