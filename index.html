@@ -705,21 +705,7 @@ header{
 }
 #toast.show{ transform:translateX(-50%) translateY(0); }
 
-/* WAITING TURN OVERLAY */
-#modal-waiting-turn{
-  position:fixed;inset:0;
-  background:rgba(2,10,4,.7);
-  display:flex;align-items:center;justify-content:center;
-  z-index:300;
-  opacity:0;
-  pointer-events:none !important;  /* NEVER block clicks - always passthrough */
-  transition:opacity .3s;
-  backdrop-filter:blur(4px);
-}
-#modal-waiting-turn.open{
-  opacity:1;
-  pointer-events:none !important;
-}
+
 
 @media(max-width:480px){
   .lobby-romme{ font-size:20px;letter-spacing:5px; }
@@ -851,7 +837,7 @@ header{
   </div>
 
   <div class="hand-wrap">
-    <div id="debug-bar" style="background:rgba(255,0,0,.3);padding:6px 10px;font-size:11px;color:#fff;border-radius:6px;margin-bottom:6px;display:none"></div>
+
     <div class="hand-hdr">
       <div><span class="hand-lbl">Deine Hand</span><span class="hand-n" id="hand-count"></span></div>
       <div class="sort-btns">
@@ -895,13 +881,7 @@ header{
   </div>
 </div>
 
-<!-- Waiting turn overlay (non-blocking) -->
-<div id="modal-waiting-turn">
-  <div style="background:linear-gradient(160deg,#0b1a0d,#070e08);border:1px solid rgba(212,175,55,.2);border-radius:16px;padding:24px 32px;text-align:center">
-    <div style="font-size:28px;margin-bottom:10px">⏳</div>
-    <div style="font-family:'Cinzel',serif;font-size:15px;color:var(--gold)" id="waiting-msg">Warte...</div>
-  </div>
-</div>
+
 
 <script>
 'use strict';
@@ -1564,57 +1544,29 @@ function doDrawDiscard() {
 
 async function doDiscard(cardId) {
   cardId = Number(cardId);
-  const dbg = document.getElementById('debug-bar');
-  if (dbg) {
-    dbg.style.display = 'block';
-    dbg.textContent = `doDiscard: id=${cardId} cur=${G?.currentPlayer}(${typeof G?.currentPlayer}) myIdx=${myIdx}(${typeof myIdx}) must=${G?.mustDiscard} phase=${G?.phase}`;
-  }
-  const dbg = document.getElementById('debug-bar');
-  function step(msg) { if(dbg) dbg.textContent = 'STEP: ' + msg; console.log('STEP:', msg); }
-
-  step('checking G');
-  if (!G) { step('NO G'); return; }
-  step('checking currentPlayer='+G.currentPlayer+' myIdx='+myIdx);
-  if (Number(G.currentPlayer) !== Number(myIdx)) { step('NOT MY TURN'); return; }
-  step('checking mustDiscard='+G.mustDiscard);
-  if (!G.mustDiscard) { step('NOT MUST DISCARD'); return; }
-  step('checking phase='+G.phase);
+  if (!G) return;
+  if (Number(G.currentPlayer) !== Number(myIdx)) return;
+  if (!G.mustDiscard) return;
   if (G.phase === 'goOutDiscard') { doGoOutFinal(cardId); return; }
-  if (G.phase !== 'playing') { step('WRONG PHASE: '+G.phase); return; }
+  if (G.phase !== 'playing') return;
 
-  step('fixing arrays, G.hands type='+typeof G.hands+' isArray='+Array.isArray(G.hands));
   const hands = fixArrays(G.hands);
   const eliminated = fixArr(G.eliminated);
-  step('hands length='+hands.length+' myIdx='+myIdx);
   const h = hands[myIdx];
-  if (!h) { step('NO HAND at myIdx='+myIdx); return; }
-  step('hand length='+h.length+' looking for id='+cardId);
+  if (!h) return;
   const c = h.find(x => Number(x.id) === cardId);
-  if (!c) { step('CARD NOT FOUND id='+cardId+' hand ids='+h.map(x=>x.id).join(',')); return; }
-  step('found card '+c.r+c.s+' filtering...');
+  if (!c) return;
   const nh = h.filter(x => Number(x.id) !== cardId);
   if (handOrder) handOrder = handOrder.filter(id => Number(id) !== cardId);
   const disc = [...fixArr(G.discardPile), c];
-  step('calling nextAct myIdx='+myIdx+' NP='+NP+' eliminated='+JSON.stringify(eliminated));
   const nxt = nextAct(myIdx, eliminated, NP);
-  step('nxt='+nxt+' building new state...');
-  const newHands = hands.map((x,i) => i === myIdx ? nh : x);
   G = { ...G,
-    hands: newHands,
+    hands: hands.map((x,i) => i === myIdx ? nh : x),
     discardPile: disc, currentPlayer: nxt, mustDiscard: false,
     eliminated,
     message: `${G.playerNames[nxt]} ist dran...`, ts: Date.now()
   };
-  step('calling playDiscard+render...');
-  playDiscard();
-  render();
-  step('calling pushState...');
-  try {
-    await pushState();
-    step('SUCCESS! Card discarded.');
-  } catch(e) {
-    step('pushState ERROR: ' + e.message);
-  }
+  playDiscard(); render(); await pushState();
 }
 
 function tryGoOut() {
@@ -1869,25 +1821,11 @@ function render() {
 
   // Hand
   if (G.hands?.[myIdx]) renderHandOnly();
-  // Debug bar
-  const dbg = document.getElementById('debug-bar');
-  if (dbg) {
-    const isMineNow = Number(G.currentPlayer) === Number(myIdx);
-    dbg.style.display = 'block';
-    dbg.textContent = `cur=${G.currentPlayer}(${typeof G.currentPlayer}) myIdx=${myIdx}(${typeof myIdx}) mine=${isMineNow} must=${G.mustDiscard} phase=${G.phase} hand=${G.hands?.[myIdx]?.length}`;
-  }
+
 
   // Waiting overlay (non-blocking display only)
-  const wt = document.getElementById('modal-waiting-turn');
-  const wtMsg = document.getElementById('waiting-msg');
-  // Waiting overlay - NEVER block pointer events
-  wt.style.pointerEvents = 'none';
-  if (G.phase === 'playing' && !isMine) {
-    wt.style.opacity = '1';
-    if (wtMsg) wtMsg.textContent = `${G.playerNames[G.currentPlayer]} ist am Zug...`;
-  } else {
-    wt.style.opacity = '0';
-  }
+
+
 }
 
 // ═══════════════════════════════════════════════════════════
