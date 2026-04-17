@@ -1216,6 +1216,7 @@ let myIdx = 0;            // my index in players array (0..NP-1)
 let isHost = false;
 let NP = 3;               // number of players
 let G = null;             // full game state (synced from Firebase)
+let roomPlayers = [];     // cached players array [{ name, ai }]
 let handOrder = null;     // local drag sort order
 let dragIdx = null;
 let pendingArr = null;
@@ -1392,6 +1393,7 @@ async function hostStart() {
   }
   const names = players.map(p => p.name);
   const gs = dealState(names, NP, Array(NP).fill(0), 1, []);
+  roomPlayers = players;
   await roomRef.update({ status: 'playing', players, gameState: gs });
 }
 
@@ -1418,7 +1420,8 @@ function listenRoom() {
     if (room.status === 'playing' && room.gameState) {
       // Confirm myIdx by name match
       if (room.players) {
-        const idx = room.players.findIndex(p => p && p.name === myName && !p.ai);
+        roomPlayers = fixArr(room.players);
+        const idx = roomPlayers.findIndex(p => p && p.name === myName && !p.ai);
         if (idx >= 0) myIdx = idx;
         else if (isHost) myIdx = 0;
         NP = room.NP || NP;
@@ -1513,7 +1516,12 @@ let aiTimer = null;
 function scheduleAI() {
   if (!isHost) return;
   clearTimeout(aiTimer);
-  aiTimer = setTimeout(runAI, 900);
+  // Check if current player is AI
+  const p = G ? Number(G.currentPlayer) : -1;
+  const player = roomPlayers[p];
+  if (player && player.ai) {
+    aiTimer = setTimeout(runAI, 800);
+  }
 }
 
 function aiGoOut(p, hand, dp, disc) {
@@ -1545,11 +1553,8 @@ function aiGoOut(p, hand, dp, disc) {
 async function runAI() {
   if (!G || G.phase !== 'playing' || !isHost) return;
   const p = Number(G.currentPlayer);
-  // Only run for AI players (not human)
-  const snap = await roomRef.once('value');
-  const room = snap.val();
-  if (!room || !room.players) return;
-  const player = room.players[p];
+  // Only run for AI players
+  const player = roomPlayers[p];
   if (!player || !player.ai) return; // human player - don't run AI
 
   const hands = fixArrays(G.hands);
