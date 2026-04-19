@@ -11,7 +11,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/firebase@10.8.1/firebase-app-compat.js"></script>
 <script src="https://unpkg.com/firebase@10.8.1/firebase-database-compat.js"></script>
-
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -503,76 +502,35 @@ header{
   .name-box{padding:32px 28px;}
 }
 </style>
-
 <style>
-/* ── LOBBY SCREEN ─────────────────────────────────────── */
-#screen-lobby{
-  display:none;min-height:100vh;
-  align-items:center;justify-content:center;
-  background:radial-gradient(ellipse at 50% 40%,#0a1f0c 0%,var(--bg) 70%);
-}
+#screen-lobby{display:none;min-height:100vh;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#0a1f0c 0%,var(--bg) 70%);}
 #screen-lobby.active{display:flex;}
-.lb-card{
-  background:linear-gradient(160deg,var(--bg3),#040e06);
-  border:1px solid rgba(212,175,55,.25);border-radius:20px;
-  padding:32px 36px;width:min(460px,94vw);
-  box-shadow:0 40px 100px rgba(0,0,0,.8);
-}
-.lb-logo{display:flex;align-items:center;gap:14px;margin-bottom:24px;}
-.lb-photo{width:56px;height:56px;border-radius:50%;object-fit:cover;
-  border:2px solid var(--gold);box-shadow:0 0 14px rgba(212,175,55,.3);flex-shrink:0;}
-.lb-ingos{font-family:'Cinzel',serif;font-size:9px;letter-spacing:5px;color:rgba(212,175,55,.55);}
-.lb-title{display:flex;align-items:baseline;gap:8px;white-space:nowrap;}
-.lb-romme{font-family:'Cinzel',serif;font-size:26px;font-weight:900;letter-spacing:8px;color:var(--gold);}
-.lb-hand{font-family:'Cinzel',serif;font-size:11px;letter-spacing:5px;color:rgba(212,175,55,.45);}
-.lb-label{font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;color:rgba(212,175,55,.5);margin-bottom:8px;margin-top:16px;}
-.lb-input{width:100%;padding:12px 16px;border-radius:10px;border:1px solid rgba(212,175,55,.25);
-  background:rgba(255,255,255,.04);color:var(--text);font-size:16px;
-  font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+#screen-waiting{display:none;min-height:100vh;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#0a1f0c 0%,var(--bg) 70%);}
+#screen-waiting.active{display:flex;}
+.lb-card{background:linear-gradient(160deg,var(--bg3),#040e06);border:1px solid rgba(212,175,55,.25);border-radius:20px;padding:32px 36px;width:min(460px,94vw);box-shadow:0 40px 100px rgba(0,0,0,.8);}
+.lb-photo{width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);box-shadow:0 0 14px rgba(212,175,55,.3);flex-shrink:0;display:block;}
+.lb-lbl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;color:rgba(212,175,55,.5);margin-bottom:8px;margin-top:16px;}
+.lb-input{width:100%;padding:12px 16px;border-radius:10px;border:1px solid rgba(212,175,55,.25);background:rgba(255,255,255,.04);color:var(--text);font-size:16px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;}
 .lb-input:focus{border-color:rgba(212,175,55,.5);}
 .lb-seg{display:flex;gap:7px;margin-bottom:4px;}
-.lb-btn{flex:1;padding:10px 6px;border-radius:8px;border:1px solid rgba(212,175,55,.2);
-  background:rgba(255,255,255,.03);color:rgba(212,175,55,.5);font-size:13px;cursor:pointer;
-  transition:all .2s;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;}
+.lb-btn{flex:1;padding:10px 6px;border-radius:8px;border:1px solid rgba(212,175,55,.2);background:rgba(255,255,255,.03);color:rgba(212,175,55,.5);font-size:13px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;}
 .lb-btn.on{background:rgba(212,175,55,.15);border-color:var(--gold);color:var(--gold);}
-.lb-divider{height:1px;background:rgba(212,175,55,.1);margin:18px 0;}
-.lb-prim{display:block;width:100%;padding:14px;border-radius:10px;border:none;cursor:pointer;
-  background:linear-gradient(135deg,var(--gold3),var(--gold),var(--gold2));
-  color:#1a0f00;font-weight:700;font-size:14px;font-family:'Cinzel',serif;letter-spacing:3px;
-  transition:filter .2s,transform .1s;margin-top:14px;
-  -webkit-tap-highlight-color:transparent;touch-action:manipulation;}
-.lb-prim:hover{filter:brightness(1.1);transform:translateY(-1px);}
-.lb-ghost{display:block;width:100%;padding:11px;border-radius:8px;
-  border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);
-  color:rgba(255,255,255,.3);cursor:pointer;font-size:13px;transition:all .2s;
-  margin-top:8px;font-family:'DM Sans',sans-serif;}
-.lb-ghost:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);}
-.lb-join-row{display:flex;gap:8px;margin-top:8px;}
-.lb-join-row .lb-input{flex:1;letter-spacing:4px;text-transform:uppercase;}
-.lb-join-row .lb-prim{width:auto;padding:12px 18px;margin-top:0;white-space:nowrap;}
-
-/* WAITING ROOM */
-#screen-waiting{
-  display:none;min-height:100vh;
-  align-items:center;justify-content:center;
-  background:radial-gradient(ellipse at 50% 40%,#0a1f0c 0%,var(--bg) 70%);
-}
-#screen-waiting.active{display:flex;}
-.wt-card{
-  background:linear-gradient(160deg,var(--bg3),#040e06);
-  border:1px solid rgba(212,175,55,.25);border-radius:20px;
-  padding:32px 36px;width:min(460px,94vw);
-  box-shadow:0 40px 100px rgba(0,0,0,.8);text-align:center;
-}
+.lb-div{height:1px;background:rgba(212,175,55,.1);margin:18px 0;}
+.lb-prim{display:block;width:100%;padding:14px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--gold3),var(--gold),var(--gold2));color:#1a0f00;font-weight:700;font-size:14px;font-family:'Cinzel',serif;letter-spacing:3px;transition:filter .2s,transform .1s;margin-top:14px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;box-sizing:border-box;}
+.lb-prim:hover{filter:brightness(1.1);}
+.lb-ghost{display:block;width:100%;padding:11px;border-radius:8px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);color:rgba(255,255,255,.3);cursor:pointer;font-size:13px;margin-top:8px;font-family:'DM Sans',sans-serif;box-sizing:border-box;}
+.lb-join{display:flex;gap:8px;margin-top:8px;}
+.lb-join .lb-input{flex:1;letter-spacing:4px;text-transform:uppercase;}
+.lb-join .lb-prim{width:auto;padding:12px 18px;margin-top:0;white-space:nowrap;}
+.wt-card{background:linear-gradient(160deg,var(--bg3),#040e06);border:1px solid rgba(212,175,55,.25);border-radius:20px;padding:32px 36px;width:min(460px,94vw);box-shadow:0 40px 100px rgba(0,0,0,.8);text-align:center;}
 .wt-title{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--gold);margin-bottom:6px;letter-spacing:3px;}
 .wt-sub{font-size:13px;color:var(--text2);margin-bottom:20px;}
-.wt-code-box{background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.2);border-radius:12px;padding:14px;margin-bottom:16px;}
-.wt-code-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:rgba(212,175,55,.5);margin-bottom:6px;}
-.wt-code-val{font-family:'Cinzel',serif;font-size:30px;font-weight:700;color:var(--gold);letter-spacing:10px;}
-.wt-code-url{font-size:11px;color:var(--text2);margin-top:6px;}
+.wt-codebox{background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.2);border-radius:12px;padding:14px;margin-bottom:16px;}
+.wt-codelbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:rgba(212,175,55,.5);margin-bottom:6px;}
+.wt-code{font-family:'Cinzel',serif;font-size:30px;font-weight:700;color:var(--gold);letter-spacing:10px;}
+.wt-url{font-size:11px;color:var(--text2);margin-top:6px;word-break:break-all;}
 .wt-slots{display:flex;flex-direction:column;gap:7px;margin-bottom:18px;}
-.wt-slot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;
-  background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);}
+.wt-slot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);text-align:left;}
 .wt-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
 .wt-dot.on{background:#2ecc71;box-shadow:0 0 8px #2ecc71;}
 .wt-dot.off{background:rgba(255,255,255,.12);}
@@ -584,50 +542,45 @@ header{
 <body>
 <canvas id="confetti-canvas"></canvas>
 
-<!-- ══ LOBBY ══════════════════════════════════════════════ -->
+<!-- LOBBY -->
 <div id="screen-lobby">
   <div class="lb-card">
-    <div class="lb-logo">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px">
       <div style="position:relative;flex-shrink:0">
         <img class="lb-photo" src="data:image/jpeg;base64,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" alt="Ingo">
         <div style="position:absolute;bottom:-2px;right:-2px;background:linear-gradient(135deg,var(--gold3),var(--gold));border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:8px">★</div>
       </div>
       <div>
-        <div class="lb-ingos">I N G O ' S</div>
-        <div class="lb-title">
-          <span class="lb-romme">ROMMÉ</span>
-          <span class="lb-hand">HAND</span>
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:5px;color:rgba(212,175,55,.55)">I N G O ' S</div>
+        <div style="display:flex;align-items:baseline;gap:8px;white-space:nowrap">
+          <span style="font-family:'Cinzel',serif;font-size:26px;font-weight:900;letter-spacing:8px;color:var(--gold)">ROMMÉ</span>
+          <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:5px;color:rgba(212,175,55,.45)">HAND</span>
         </div>
       </div>
     </div>
 
-    <!-- SOLO -->
-    <div class="lb-label">SOLO SPIELEN</div>
+    <div class="lb-lbl">SOLO SPIELEN</div>
     <button class="lb-prim" id="btn-solo">SOLO STARTEN →</button>
 
-    <div class="lb-divider"></div>
-
-    <!-- CREATE MULTI -->
-    <div class="lb-label">MULTIPLAYER ERSTELLEN</div>
+    <div class="lb-div"></div>
+    <div class="lb-lbl">MULTIPLAYER ERSTELLEN</div>
     <input class="lb-input" id="lb-host-name" placeholder="Dein Name" maxlength="16" autocomplete="off">
-    <div class="lb-label" style="margin-top:12px">SPIELERANZAHL</div>
-    <div class="lb-seg" id="lb-count-seg">
+    <div class="lb-lbl" style="margin-top:12px">SPIELERANZAHL</div>
+    <div class="lb-seg">
       <button class="lb-btn" id="btn-count-2">2 Spieler</button>
       <button class="lb-btn on" id="btn-count-3">3 Spieler</button>
       <button class="lb-btn" id="btn-count-4">4 Spieler</button>
     </div>
-    <div class="lb-label" style="margin-top:12px">FREIE PLÄTZE</div>
+    <div class="lb-lbl" style="margin-top:12px">FREIE PLÄTZE</div>
     <div class="lb-seg">
       <button class="lb-btn on" id="btn-fill-human">Auf Spieler warten</button>
       <button class="lb-btn" id="btn-fill-ai">KI auffüllen</button>
     </div>
     <button class="lb-prim" id="btn-create">SPIEL ERSTELLEN →</button>
 
-    <div class="lb-divider"></div>
-
-    <!-- JOIN MULTI -->
-    <div class="lb-label">SPIEL BEITRETEN</div>
-    <div class="lb-join-row">
+    <div class="lb-div"></div>
+    <div class="lb-lbl">SPIEL BEITRETEN</div>
+    <div class="lb-join">
       <input class="lb-input" id="lb-join-code" placeholder="CODE" maxlength="8">
       <button class="lb-prim" id="btn-join">BEITRETEN</button>
     </div>
@@ -635,23 +588,23 @@ header{
   </div>
 </div>
 
-<!-- ══ WAITING ROOM ══════════════════════════════════════ -->
+<!-- WAITING ROOM -->
 <div id="screen-waiting">
   <div class="wt-card">
     <div class="wt-title">WARTERAUM</div>
-    <div class="wt-sub" id="wt-sub">Warte auf Mitspieler...</div>
-    <div class="wt-code-box">
-      <div class="wt-code-lbl">RAUM-CODE</div>
-      <div class="wt-code-val" id="wt-code">------</div>
-      <div class="wt-code-url" id="wt-url"></div>
+    <div class="wt-sub" id="wt-sub">Warte...</div>
+    <div class="wt-codebox">
+      <div class="wt-codelbl">RAUM-CODE</div>
+      <div class="wt-code" id="wt-code">------</div>
+      <div class="wt-url" id="wt-url"></div>
     </div>
     <div class="wt-slots" id="wt-slots"></div>
-    <button class="lb-prim" id="wt-start-btn" style="display:none">SPIEL STARTEN →</button>
+    <button class="lb-prim" id="btn-start" style="display:none">SPIEL STARTEN →</button>
     <button class="lb-ghost" id="btn-leave">Raum verlassen</button>
   </div>
 </div>
 
-<!-- ══ SINGLE PLAYER SCREENS (unchanged) ════════════════ -->
+<!-- SINGLE PLAYER SCREENS -->
 <canvas id="confetti-canvas"></canvas>
 <!-- NAME ENTRY SCREEN -->
 <div id="screen-name">
@@ -777,10 +730,10 @@ header{
 <script>
 'use strict';
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // FIREBASE
-// ═══════════════════════════════════════════════════════════
-const FB = {
+// ═══════════════════════════════════════════
+const FB_CFG = {
   apiKey:"AIzaSyC5wUppAxAE_LrEpr8FdlAfqNuyiq59HV8",
   authDomain:"romme-hand.firebaseapp.com",
   databaseURL:"https://romme-hand-default-rtdb.europe-west1.firebasedatabase.app",
@@ -789,75 +742,61 @@ const FB = {
   messagingSenderId:"848283747928",
   appId:"1:848283747928:web:5ebdf6814518ea87bdac2d"
 };
-let _db = null;
+let _db=null;
 function getDB(){
   if(_db)return _db;
-  try{
-    if(!firebase.apps.length)firebase.initializeApp(FB);
-    _db=firebase.database();
-    return _db;
-  }catch(e){alert('Firebase Fehler: '+e.message);return null;}
+  try{if(!firebase.apps.length)firebase.initializeApp(FB_CFG);_db=firebase.database();return _db;}
+  catch(e){alert('Firebase: '+e.message);return null;}
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // MULTIPLAYER STATE
-// ═══════════════════════════════════════════════════════════
-const MP = {
-  on: false,         // multiplayer active?
-  host: false,       // am I the host?
-  myIdx: 0,          // my player index
-  myName: '',
-  roomCode: null,
-  roomRef: null,
-  players: [],       // [{name, ai}]
-  NP: 3,
-  listener: null,
+// ═══════════════════════════════════════════
+const MP={
+  on:false, host:false, myIdx:0, myName:'',
+  roomCode:null, roomRef:null, players:[], NP:3,
+  _listener:null,
 
-  // Push current G to Firebase
   async push(){
     if(!this.on||!this.host||!this.roomRef||!G)return;
     G.ts=Date.now();
     try{await this.roomRef.child('gameState').set(G);}
-    catch(e){console.error('Push error:',e);}
+    catch(e){console.error('push:',e);}
   },
 
-  // Schedule AI after push (host only)
   schedAI(){
-    if(!this.on||!this.host)return;
-    const p=G?Number(G.currentPlayer):-1;
-    const pl=this.players[p];
-    if(pl&&pl.ai){clearTimeout(aiTimer);aiTimer=setTimeout(runAI,800);}
+    if(!this.on||!this.host||!G||G.phase!=='playing')return;
+    const p=Number(G.currentPlayer);
+    if(this.players[p]&&this.players[p].ai){
+      clearTimeout(aiTimer);aiTimer=setTimeout(runAI,800);
+    }
   },
 
-  // Listen to Firebase for state changes
   listen(){
     if(!this.roomRef)return;
-    this.listener=this.roomRef.on('value',snap=>{
-      const room=snap.val();
-      if(!room)return;
-      if(room.status==='waiting'){mpUpdateWaiting(room);return;}
+    this._listener=this.roomRef.on('value',snap=>{
+      const room=snap.val();if(!room)return;
+      if(room.status==='waiting'){mpRenderWaiting(room);return;}
       if(room.status==='playing'&&room.gameState){
         // Update players cache
         if(room.players){
-          this.players=Object.values(room.players);
           this.NP=room.NP||this.NP;
+          this.players=[];
+          for(let i=0;i<this.NP;i++)this.players[i]=room.players[i]||{name:'',ai:false};
         }
         const raw=room.gameState;
-        // Only update if newer
         if(!G||raw.ts>(G.ts||0)){
-          const wasPhase=G?G.phase:null;
-          G=mpFix(raw);
-          // Show game if not visible
+          const oldPhase=G?G.phase:null;
+          // Fix Firebase array->object conversion
+          G=mpFixArrays(raw);
           if(document.getElementById('screen-game').style.display!=='block'){
             document.getElementById('screen-waiting').classList.remove('active');
-            document.getElementById('screen-name').style.display='none';
             document.getElementById('screen-game').style.display='block';
             handOrder=null;
             const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
           }
           render();
-          // Phase changes
-          if(G.phase!==wasPhase){
+          if(G.phase!==oldPhase){
             if(G.phase==='roundEnd')showRoundEnd();
             else if(G.phase==='buyIn')showBuyIn();
             else if(G.phase==='gameOver')showGameOver();
@@ -866,7 +805,6 @@ const MP = {
               const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
             }
           }
-          // Schedule AI if my turn as host
           if(this.host&&G.phase==='playing')this.schedAI();
         }
       }
@@ -874,32 +812,21 @@ const MP = {
   },
 
   stop(){
-    if(this.roomRef&&this.listener){this.roomRef.off('value',this.listener);}
-    this.on=false;this.host=false;this.roomRef=null;this.listener=null;
-    this.roomCode=null;this.players=[];this.myIdx=0;
+    if(this.roomRef&&this._listener)this.roomRef.off('value',this._listener);
+    this.on=false;this.host=false;this.roomRef=null;this._listener=null;
+    this.roomCode=null;this.players=[];this.myIdx=0;this.NP=3;
   }
 };
 
-// Fix Firebase array-to-object conversion
-function mpFix(gs){
+function mpFixArrays(gs){
   if(!gs)return gs;
-  function fa(v){
-    if(!v)return[];
-    if(Array.isArray(v))return v;
-    return Object.keys(v).sort((a,b)=>Number(a)-Number(b)).map(k=>v[k]);
-  }
-  return{...gs,
-    hands:fa(gs.hands).map(h=>fa(h)),
-    drawPile:fa(gs.drawPile),discardPile:fa(gs.discardPile),
-    eliminated:fa(gs.eliminated),buyInPending:fa(gs.buyInPending),
-    validDiscardIds:fa(gs.validDiscardIds),scores:fa(gs.scores),
-    playerNames:fa(gs.playerNames),contributions:fa(gs.contributions)
-  };
+  function fa(v){if(!v)return[];if(Array.isArray(v))return v;return Object.keys(v).sort((a,b)=>a-b).map(k=>v[k]);}
+  return{...gs,hands:fa(gs.hands).map(h=>fa(h)),drawPile:fa(gs.drawPile),discardPile:fa(gs.discardPile),eliminated:fa(gs.eliminated),buyInPending:fa(gs.buyInPending),validDiscardIds:fa(gs.validDiscardIds),scores:fa(gs.scores),playerNames:fa(gs.playerNames),contributions:fa(gs.contributions)};
 }
 
-// ═══════════════════════════════════════════════════════════
-// ORIGINAL SINGLE-PLAYER SCRIPT
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
+// ORIGINAL SINGLE-PLAYER GAME LOGIC
+// ═══════════════════════════════════════════
 
 // ── SOUND ─────────────────────────────────────────────────
 let AC=null;
@@ -1196,7 +1123,6 @@ function aiGoOut(p, hand, dp, disc){
 }
 
 function runAI(){
-  if(MP.on&&!MP.host)return;
   if(!G||G.phase!=='playing'||G.currentPlayer===0)return;
   const p=G.currentPlayer;
   let dp=[...G.drawPile],disc=[...G.discardPile];
@@ -1211,7 +1137,7 @@ function runAI(){
     G={...G,hands:G.hands.map((h,i)=>i===p?fh:h),
       drawPile:dp,discardPile:disc,currentPlayer:nxt,mustDiscard:false,
       message:nxt===0?`${G.playerNames[0]}, dein Zug — Karte ziehen!`:`${G.playerNames[nxt]} denkt...`};
-    render();if(MP.on&&MP.host)MP.push();scheduleAI();return;
+    render();scheduleAI();return;
   }
 
   // Normal draw
@@ -1242,51 +1168,51 @@ function scheduleAI(){
 
 // ── PLAYER ACTIONS ─────────────────────────────────────────
 function doDraw(){
+  const _hIdx=MP.on?Number(MP.myIdx):0;
   if(!G||G.currentPlayer!==0||G.mustDiscard||G.phase!=='playing')return;
-  if(G.hands[0].length>=HS+1)return;
+  if(G.hands[_hIdx].length>=HS+1)return;
   let dp=[...G.drawPile],disc=[...G.discardPile];
   if(!dp.length){const top=disc.pop();dp=shuf(disc);disc=top?[top]:[];}
   if(!dp.length){G.message='Keine Karten mehr!';render();return;}
   const card=dp.pop();
-  const nh=ssort([...G.hands[0],card]);
-  playDraw();G={...G,hands:G.hands.map((h,i)=>i===0?nh:h),drawPile:dp,discardPile:disc,
+  const nh=ssort([...G.hands[_hIdx],card]);
+  playDraw();G={...G,hands:G.hands.map((h,i)=>i===_hIdx?nh:h),drawPile:dp,discardPile:disc,
     mustDiscard:true,message:'Gezogen — Karte ablegen oder FERTIG! drücken.'};
   render();
-  if(MP.on&&MP.host)MP.push();
 }
 
 function doDrawDiscard(){
+  const _hIdx=MP.on?Number(MP.myIdx):0;
   if(!G||G.currentPlayer!==0||G.mustDiscard||G.phase!=='playing')return;
-  if(G.hands[0].length>=HS+1)return;
+  if(G.hands[_hIdx].length>=HS+1)return;
   const disc=[...G.discardPile];
   if(!disc.length)return;
   const card=disc.pop();
-  const nh=ssort([...G.hands[0],card]);
-  playDraw();G={...G,hands:G.hands.map((h,i)=>i===0?nh:h),discardPile:disc,
+  const nh=ssort([...G.hands[_hIdx],card]);
+  playDraw();G={...G,hands:G.hands.map((h,i)=>i===_hIdx?nh:h),discardPile:disc,
     mustDiscard:true,message:`${card.j?'Joker':card.r+card.s} vom Ablagestapel — leg ab oder FERTIG!`};
   render();
-  if(MP.on&&MP.host)MP.push();
 }
 
 function doDiscard(cardId){
-  const _myP=MP.on?MP.myIdx:0;
-  if(!G||Number(G.currentPlayer)!==Number(_myP)||!G.mustDiscard)return;
+  const _hIdx=MP.on?Number(MP.myIdx):0;
+  if(!G||G.currentPlayer!==0||!G.mustDiscard)return;
   if(G.phase==='goOutDiscard'){doGoOutFinal(cardId);return;}
-  const h=G.hands[0];
+  const h=G.hands[_hIdx];
   const c=h.find(x=>x.id===cardId);if(!c)return;
   const nh=h.filter(x=>x.id!==cardId);
   const disc=[...G.discardPile,c];
-  const nxt=nextAct(0,G.eliminated);
+  const nxt=nextAct(_hIdx,G.eliminated);
   playDiscard();G={...G,hands:G.hands.map((x,i)=>i===0?nh:x),
     discardPile:disc,currentPlayer:nxt,mustDiscard:false,
     message:nxt===0?`${G.playerNames[0]}, dein Zug — Karte ziehen!`:`${G.playerNames[nxt]} denkt...`};
   render();scheduleAI();
-  if(MP.on&&MP.host)MP.push();
 }
 
 function tryGoOut(){
+  const _hIdx=MP.on?Number(MP.myIdx):0;
   if(!G||G.phase!=='playing'||G.currentPlayer!==0||!G.mustDiscard)return;
-  const h=G.hands[0];
+  const h=G.hands[_hIdx];
   if(h.length!==HS+1){
     G.message='Erst eine Karte ziehen!';render();return;
   }
@@ -1321,10 +1247,11 @@ function confirmGoOut(){
 }
 
 function doGoOutFinal(cardId){
-  const _gp=MP.on?MP.myIdx:0;
-  const h=G.hands[_gp];
+  const _hIdx=MP.on?Number(MP.myIdx):0;
+  const h=G.hands[_hIdx];
   const c=h.find(x=>x.id===cardId);if(!c)return;
   const rem=h.filter(x=>x.id!==cardId);
+  // Accept if card is in validDiscardIds OR if pen=0 or singleSuit
   const inValid=!G.validDiscardIds.length||G.validDiscardIds.includes(cardId);
   const valid=inValid&&(pen(rem)===0||isSingleSuit(rem));
   if(!valid){
@@ -1339,7 +1266,6 @@ function doGoOutFinal(cardId){
     discardPile:disc,scores:ns,phase:'roundEnd',roundWinner:0,
     mustDiscard:false,message:'🎉 Du bist fertig!'};
   render();showRoundEnd();
-  if(MP.on&&MP.host)MP.push();
 }
 
 
@@ -1482,7 +1408,6 @@ function endRound(){
     ?`${G.playerNames[0]}, du hast 11 Karten — leg ab oder drück FERTIG!`
     :`${G.playerNames[0]}, dein Zug — Karte ziehen!`;
   render();scheduleAI();
-  if(MP.on&&MP.host)MP.push();
 }
 
 function doBuyIn(pi,yes){
@@ -1512,7 +1437,6 @@ function doBuyIn(pi,yes){
     :`${G.playerNames[0]}, dein Zug — Karte ziehen!`;
   const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
   render();scheduleAI();
-  if(MP.on&&MP.host)MP.push();
 }
 
 // ── RENDER ─────────────────────────────────────────────────
@@ -1563,15 +1487,16 @@ function renderHandOnly(){
   hint.className='hint'+(clickable&&!goOut?' visible':'');
   const cardsEl=document.getElementById('hand-cards');
   cardsEl.innerHTML='';
-  const _myHand=G.hands[_hIdx]||[];
-  let displayHand=_myHand;
+  // Apply handOrder if available:
+  let displayHand=G.hands[_hIdx]||[];
   if(handOrder&&handOrder.length){
-    const byId=Object.fromEntries(_myHand.map(c=>[c.id,c]));
+    const byId=Object.fromEntries((G.hands[_hIdx]||[]).map(c=>[c.id,c]));
     const ordered=handOrder.filter(id=>byId[id]).map(id=>byId[id]);
-    const extra=_myHand.filter(c=>!handOrder.includes(c.id));
+    // Add any new cards not yet in handOrder
+    const extra=(G.hands[_hIdx]||[]).filter(c=>!handOrder.includes(c.id));
     displayHand=[...ordered,...extra];
   } else {
-    handOrder=_myHand.map(c=>c.id);
+    handOrder=(G.hands[_hIdx]||[]).map(c=>c.id);
   }
   displayHand.forEach((card,i)=>{
     const isGlow=goOut&&G.validDiscardIds.includes(card.id);
@@ -1689,21 +1614,22 @@ function render(){
 
   // Hand
   const clickable=myTurn&&G.mustDiscard;
-  document.getElementById('hand-count').textContent=`${G.hands[0].length} Karten`;
+  document.getElementById('hand-count').textContent=`${(G.hands[_hIdx]||[]).length} Karten`;
   const hint=document.getElementById('hint');
   hint.className='hint'+(clickable&&!goOut?' visible':'');
 
   const cardsEl=document.getElementById('hand-cards');
   cardsEl.innerHTML='';
-  const _myHand=G.hands[_hIdx]||[];
-  let displayHand=_myHand;
+  // Apply handOrder if available:
+  let displayHand=G.hands[_hIdx]||[];
   if(handOrder&&handOrder.length){
-    const byId=Object.fromEntries(_myHand.map(c=>[c.id,c]));
+    const byId=Object.fromEntries((G.hands[_hIdx]||[]).map(c=>[c.id,c]));
     const ordered=handOrder.filter(id=>byId[id]).map(id=>byId[id]);
-    const extra=_myHand.filter(c=>!handOrder.includes(c.id));
+    // Add any new cards not yet in handOrder
+    const extra=(G.hands[_hIdx]||[]).filter(c=>!handOrder.includes(c.id));
     displayHand=[...ordered,...extra];
   } else {
-    handOrder=_myHand.map(c=>c.id);
+    handOrder=(G.hands[_hIdx]||[]).map(c=>c.id);
   }
   displayHand.forEach((card,i)=>{
     const isGlow=goOut&&G.validDiscardIds.includes(card.id);
@@ -1809,213 +1735,203 @@ document.getElementById('btn-new-game').addEventListener('click',()=>{
 });
 document.getElementById('btn-ssort').addEventListener('click',()=>{
   if(!G)return;
-  G={...G,hands:G.hands.map((h,i)=>i===0?ssort(h):h)};
-  handOrder=ssort(G.hands[0]).map(c=>c.id);renderHandOnly();
+  G={...G,hands:G.hands.map((h,i)=>i===_hIdx?ssort(h):h)};
+  handOrder=ssort(G.hands[_hIdx]).map(c=>c.id);renderHandOnly();
 });
 document.getElementById('btn-vsort').addEventListener('click',()=>{
   if(!G)return;
-  G={...G,hands:G.hands.map((h,i)=>i===0?vsort(h):h)};
-  handOrder=vsort(G.hands[0]).map(c=>c.id);renderHandOnly();
+  G={...G,hands:G.hands.map((h,i)=>i===_hIdx?vsort(h):h)};
+  handOrder=vsort(G.hands[_hIdx]).map(c=>c.id);renderHandOnly();
 });
 
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
+// MP PUSH HOOKS (add after each action)
+// ═══════════════════════════════════════════
+const _origDoDiscard=doDiscard;
+doDiscard=function(cardId){_origDoDiscard(cardId);if(MP.on&&MP.host){MP.push();MP.schedAI();}};
+const _origDoDraw=doDraw;
+doDraw=function(){_origDoDraw();if(MP.on&&MP.host)MP.push();};
+const _origDoDrawDiscard=doDrawDiscard;
+doDrawDiscard=function(){_origDoDrawDiscard();if(MP.on&&MP.host)MP.push();};
+const _origEndRound=endRound;
+endRound=function(){_origEndRound();if(MP.on&&MP.host){MP.push();MP.schedAI();}};
+const _origDoBuyIn=doBuyIn;
+doBuyIn=function(pi,yes){_origDoBuyIn(pi,yes);if(MP.on&&MP.host){MP.push();MP.schedAI();}};
+
+// runAI: only on host
+const _origRunAI=runAI;
+runAI=function(){
+  if(MP.on&&!MP.host)return;
+  _origRunAI();
+  if(MP.on&&MP.host){MP.push();MP.schedAI();}
+};
+
+// ═══════════════════════════════════════════
 // LOBBY UI
-// ═══════════════════════════════════════════════════════════
-let lbCount=3, lbFill='human';
+// ═══════════════════════════════════════════
+let lbCount=3,lbFill='human';
+const AI_POOL=['Dani','Holly','Julia','Joschi','Harry'];
 
 function lbSetCount(n){
   lbCount=n;
-  document.querySelectorAll('#lb-count-seg .lb-btn').forEach(b=>
-    b.classList.toggle('on',parseInt(b.textContent)===n));
+  ['btn-count-2','btn-count-3','btn-count-4'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.classList.toggle('on',parseInt(el.textContent)===n);
+  });
 }
 function lbSetFill(m){
   lbFill=m;
-  document.getElementById('btn-fill-human').classList.toggle('on',m==='human');
-  document.getElementById('btn-fill-ai').classList.toggle('on',m==='ai');
+  document.getElementById('btn-fill-human')?.classList.toggle('on',m==='human');
+  document.getElementById('btn-fill-ai')?.classList.toggle('on',m==='ai');
 }
-
-function startSolo(){
-  document.getElementById('screen-lobby').classList.remove('active');
-  document.getElementById('screen-name').style.display='flex';
-}
-
 function genCode(){return Math.random().toString(36).substr(2,6).toUpperCase();}
 
 async function mpCreate(){
   const db=getDB();if(!db)return;
   const name=(document.getElementById('lb-host-name').value.trim()||'Ingo').substr(0,16);
-  MP.myName=name;MP.host=true;MP.myIdx=0;MP.NP=lbCount;
+  MP.myName=name;MP.host=true;MP.myIdx=0;MP.NP=lbCount;NP=lbCount;
   MP.roomCode=genCode();
   MP.roomRef=db.ref('rooms/'+MP.roomCode);
-  const AI_POOL=['Dani','Holly','Julia','Joschi','Harry'];
-  const pool=AI_POOL.filter(n=>n.toLowerCase()!==name.toLowerCase());
+  const used=[name.toLowerCase()];
+  const pool=AI_POOL.filter(n=>!used.includes(n.toLowerCase()));
   const players=[{name,ai:false}];
   for(let i=1;i<lbCount;i++){
     players[i]=lbFill==='ai'?{name:pool[(i-1)%pool.length],ai:true}:{name:'',ai:false,empty:true};
   }
   MP.players=players;
   await MP.roomRef.set({status:'waiting',NP:lbCount,players,host:0,created:Date.now()});
-  mpShowWaiting();
-  MP.listen();
+  mpShowWaiting();MP.listen();
 }
 
 async function mpJoin(){
   const db=getDB();if(!db)return;
   const code=document.getElementById('lb-join-code').value.trim().toUpperCase();
   const name=(document.getElementById('lb-join-name').value.trim()||'Gast').substr(0,16);
-  if(!code){alert('Bitte Code eingeben');return;}
+  if(!code){alert('Code eingeben!');return;}
   MP.roomRef=db.ref('rooms/'+code);
   const snap=await MP.roomRef.once('value');
   const room=snap.val();
   if(!room){alert('Raum nicht gefunden!');return;}
-  if(room.status!=='waiting'){alert('Spiel bereits gestartet!');return;}
-  // Firebase stores arrays as objects - use index-based extraction
-  const rawPlayers = room.players || {};
-  const players = [];
-  for(let i=0;i<MP.NP;i++){
-    players[i] = rawPlayers[i] || {name:'',ai:false,empty:true};
-  }
+  if(room.status!=='waiting'){alert('Spiel läuft bereits!');return;}
+  const np=room.NP||3;
+  const rp=room.players||{};
+  const players=[];
+  for(let i=0;i<np;i++)players[i]=rp[i]||{name:'',ai:false,empty:true};
   const slot=players.findIndex((p,i)=>i>0&&(!p||p.empty||!p.name));
-  if(slot===-1){alert('Raum ist voll!');return;}
-  MP.myName=name;MP.host=false;MP.myIdx=slot;MP.NP=room.NP||3;
+  if(slot<0){alert('Raum ist voll!');return;}
+  MP.myName=name;MP.host=false;MP.myIdx=slot;MP.NP=np;NP=np;
   MP.roomCode=code;
   players[slot]={name,ai:false};
   MP.players=players;
   await MP.roomRef.child('players').set(players);
-  mpShowWaiting();
-  MP.listen();
+  mpShowWaiting();MP.listen();
 }
 
 function mpShowWaiting(){
   document.getElementById('screen-lobby').classList.remove('active');
   document.getElementById('screen-waiting').classList.add('active');
   document.getElementById('wt-code').textContent=MP.roomCode;
-  const url=location.href.split('?')[0]+'?join='+MP.roomCode;
-  document.getElementById('wt-url').textContent=url;
-  mpUpdateWaiting(null);
+  document.getElementById('wt-url').textContent=location.href.split('?')[0]+'?join='+MP.roomCode;
+  if(MP.host)document.getElementById('btn-start').style.display='block';
+  mpRenderWaiting(null);
 }
 
-function mpUpdateWaiting(room){
-  let players;
-  if(room){
-    const rp=room.players||{};
-    players=[];
-    for(let i=0;i<MP.NP;i++) players[i]=rp[i]||{name:'',ai:false,empty:true};
-  } else {
-    players=MP.players;
-  }
-  const list=document.getElementById('wt-slots');
-  list.innerHTML='';
+function mpRenderWaiting(room){
+  const rp=room?room.players:{};
+  const np=room?room.NP:MP.NP;
+  const players=[];
+  for(let i=0;i<np;i++)players[i]=(room?rp[i]:MP.players[i])||{name:'',ai:false,empty:true};
+  const list=document.getElementById('wt-slots');list.innerHTML='';
   players.forEach((p,i)=>{
     const ai=p&&p.ai,joined=p&&p.name&&!p.empty;
     const div=document.createElement('div');div.className='wt-slot';
     div.innerHTML=`<div class="wt-dot ${ai?'ai':joined?'on':'off'}"></div>
-      <span class="wt-name">${ai?p.name:joined?p.name+(i===MP.myIdx?' (Du)':''):'Warte auf Spieler...'}</span>
+      <span class="wt-name">${ai?p.name:joined?(p.name+(i===MP.myIdx?' (Du)':'')):'Warte auf Spieler...'}</span>
       <span class="wt-tag">${ai?'KI':joined?'SPIELER':'OFFEN'}</span>`;
     list.appendChild(div);
   });
-  const allReady=players.every(p=>p&&(p.name||p.ai)&&!p.empty);
-  const human=players.filter(p=>p&&p.name&&!p.empty&&!p.ai).length;
-  document.getElementById('wt-sub').textContent=
-    allReady?`Alle ${MP.NP} Spieler dabei!`:`${human} / ${MP.NP} Spieler`;
-  if(MP.host)document.getElementById('wt-start-btn').style.display='block';
+  const n=players.filter(p=>p&&p.name&&!p.empty).length;
+  document.getElementById('wt-sub').textContent=`${n} / ${np} Spieler dabei`;
 }
 
 async function mpHostStart(){
-
-  if(!MP.host||!MP.roomRef){
-    alert('Fehler: Kein Raum aktiv');
-    return;
-  }
+  if(!MP.host||!MP.roomRef)return;
   try{
-  const snap=await MP.roomRef.once('value');
-  const room=snap.val();
-  // Firebase stores arrays as objects - use index-based extraction
-  const rawPlayers = room.players || {};
-  const players = [];
-  for(let i=0;i<MP.NP;i++){
-    players[i] = rawPlayers[i] || {name:'',ai:false,empty:true};
-  }
-  // Fill empties with AI
-  const AI_POOL=['Dani','Holly','Julia','Joschi','Harry'];
-  const used=players.filter(p=>p&&p.name).map(p=>p.name.toLowerCase());
-  const pool=AI_POOL.filter(n=>!used.includes(n.toLowerCase()));
-  let pi=0;
-  for(let i=0;i<MP.NP;i++){
-    if(!players[i]||players[i].empty||!players[i].name){
-      players[i]={name:pool[pi++%pool.length],ai:true};
+    const snap=await MP.roomRef.once('value');
+    const room=snap.val();
+    const np=room.NP||MP.NP;
+    const rp=room.players||{};
+    const players=[];
+    for(let i=0;i<np;i++)players[i]=rp[i]||{name:'',ai:false,empty:true};
+    // Fill empty slots with AI
+    const used=players.filter(p=>p&&p.name).map(p=>p.name.toLowerCase());
+    const pool=AI_POOL.filter(n=>!used.includes(n.toLowerCase()));
+    let pi=0;
+    for(let i=0;i<np;i++){
+      if(!players[i]||players[i].empty||!players[i].name){
+        players[i]={name:pool[pi++%pool.length],ai:true};
+      }
     }
-  }
-  MP.players=players;
-  const names=players.map(p=>p.name);
-  NP=MP.NP; // Set global NP for deal()
-  const initContrib=Array(MP.NP).fill(2);
-  G=deal(Array(MP.NP).fill(0),1,[],names,initContrib,MP.NP*2);
-  G.message=G.mustDiscard
-    ?`${names[0]}, du hast 11 Karten — leg ab oder drück FERTIG!`
-    :`${names[0]}, dein Zug — Karte ziehen!`;
-  G.ts=Date.now();
-  MP.on=true;
-  await MP.roomRef.update({status:'playing',players,gameState:G});
-  // Show game for host
-  document.getElementById('screen-waiting').classList.remove('active');
-  document.getElementById('screen-game').style.display='block';
-  handOrder=null;
-  const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
-  render();
-  MP.schedAI();
-  }catch(e){
-    alert('Start-Fehler: '+e.message);
-    console.error(e);
-  }
+    MP.players=players;NP=np;MP.NP=np;
+    const names=players.map(p=>p.name);
+    const contrib=Array(np).fill(2);
+    G=deal(Array(np).fill(0),1,[],names,contrib,np*2);
+    G.message=G.mustDiscard
+      ?`${names[0]}, du hast 11 Karten — leg ab oder drück FERTIG!`
+      :`${names[0]}, dein Zug — Karte ziehen!`;
+    G.ts=Date.now();MP.on=true;
+    await MP.roomRef.update({status:'playing',players,gameState:G});
+    document.getElementById('screen-waiting').classList.remove('active');
+    document.getElementById('screen-game').style.display='block';
+    handOrder=null;
+    const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
+    render();MP.schedAI();
+  }catch(e){alert('Fehler: '+e.message);console.error(e);}
 }
 
 function mpLeave(){
-  if(MP.roomRef&&MP.listener)MP.roomRef.off('value',MP.listener);
   MP.stop();
   document.getElementById('screen-waiting').classList.remove('active');
   document.getElementById('screen-lobby').classList.add('active');
 }
 
-// Multiplayer turn check helper
-function mpMyTurn(){
-  if(!MP.on||!G)return true; // solo: always true
-  return Number(G.currentPlayer)===Number(MP.myIdx);
-}
-
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
-  // Attach all button listeners explicitly (avoids onclick strict-mode issues)
-  const $ = id => document.getElementById(id);
-  const on = (id, fn) => { const el=$(id); if(el) el.addEventListener('click', fn); };
-  
-  on('btn-solo', startSolo);
-  on('btn-create', mpCreate);
-  on('btn-join', mpJoin);
-  on('btn-leave', mpLeave);
-  on('wt-start-btn', mpHostStart);
-  on('btn-count-2', () => lbSetCount(2));
-  on('btn-count-3', () => lbSetCount(3));
-  on('btn-count-4', () => lbSetCount(4));
-  on('btn-fill-human', () => lbSetFill('human'));
-  on('btn-fill-ai', () => lbSetFill('ai'));
-  // Check for auto-join URL param
+  const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
+  on('btn-solo',()=>{
+    document.getElementById('screen-lobby').classList.remove('active');
+    document.getElementById('screen-name').style.display='flex';
+  });
+  on('btn-create',mpCreate);
+  on('btn-join',mpJoin);
+  on('btn-start',mpHostStart);
+  on('btn-leave',mpLeave);
+  on('btn-count-2',()=>lbSetCount(2));
+  on('btn-count-3',()=>lbSetCount(3));
+  on('btn-count-4',()=>lbSetCount(4));
+  on('btn-fill-human',()=>lbSetFill('human'));
+  on('btn-fill-ai',()=>lbSetFill('ai'));
+  // Original SP listeners
+  on('btn-play',()=>startGame(document.getElementById('name-input').value));
+  on('btn-draw',doDraw);
+  on('btn-draw-disc',doDrawDiscard);
+  on('btn-fertig',tryGoOut);
+  on('btn-confirm-fertig',confirmGoOut);
+  on('btn-cancel-fertig',()=>closeModal('modal-fertig'));
+  on('btn-next-round',endRound);
+  on('btn-new-game',()=>{closeModal('modal-gameover');document.getElementById('screen-game').style.display='none';document.getElementById('screen-name').style.display='none';document.getElementById('screen-lobby').classList.add('active');MP.stop();});
+  on('btn-ssort',()=>{if(!G)return;const h=G.hands[MP.on?MP.myIdx:0];G={...G,hands:G.hands.map((x,i)=>i===(MP.on?MP.myIdx:0)?ssort(h):x)};handOrder=ssort(G.hands[MP.on?MP.myIdx:0]).map(c=>c.id);renderHandOnly();});
+  on('btn-vsort',()=>{if(!G)return;const h=G.hands[MP.on?MP.myIdx:0];G={...G,hands:G.hands.map((x,i)=>i===(MP.on?MP.myIdx:0)?vsort(h):x)};handOrder=vsort(G.hands[MP.on?MP.myIdx:0]).map(c=>c.id);renderHandOnly();});
+  document.getElementById('name-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')startGame(document.getElementById('name-input').value);});
+  document.getElementById('lb-join-code')?.addEventListener('input',e=>e.target.value=e.target.value.toUpperCase());
+  document.getElementById('lb-host-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')mpCreate();});
+  // Auto-join from URL
   const code=new URLSearchParams(location.search).get('join');
-  if(code){
-    document.getElementById('lb-join-code').value=code;
-    document.getElementById('screen-lobby').classList.add('active');
-  }else{
-    document.getElementById('screen-lobby').classList.add('active');
-  }
-  document.getElementById('lb-join-code').addEventListener('input',e=>{
-    e.target.value=e.target.value.toUpperCase();
-  });
-  document.getElementById('lb-host-name').addEventListener('keydown',e=>{
-    if(e.key==='Enter')mpCreate();
-  });
+  if(code){document.getElementById('lb-join-code').value=code;document.getElementById('screen-lobby').classList.add('active');}
+  else document.getElementById('screen-lobby').classList.add('active');
 });
 </script>
 </body>
