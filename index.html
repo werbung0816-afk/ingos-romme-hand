@@ -603,7 +603,7 @@ header{
 
     <!-- SOLO -->
     <div class="lb-label">SOLO SPIELEN</div>
-    <button class="lb-prim" onclick="startSolo()">SOLO STARTEN →</button>
+    <button class="lb-prim" id="btn-solo">SOLO STARTEN →</button>
 
     <div class="lb-divider"></div>
 
@@ -612,16 +612,16 @@ header{
     <input class="lb-input" id="lb-host-name" placeholder="Dein Name" maxlength="16" autocomplete="off">
     <div class="lb-label" style="margin-top:12px">SPIELERANZAHL</div>
     <div class="lb-seg" id="lb-count-seg">
-      <button class="lb-btn" onclick="lbSetCount(2)">2 Spieler</button>
-      <button class="lb-btn on" onclick="lbSetCount(3)">3 Spieler</button>
-      <button class="lb-btn" onclick="lbSetCount(4)">4 Spieler</button>
+      <button class="lb-btn" id="btn-count-2">2 Spieler</button>
+      <button class="lb-btn on" id="btn-count-3">3 Spieler</button>
+      <button class="lb-btn" id="btn-count-4">4 Spieler</button>
     </div>
     <div class="lb-label" style="margin-top:12px">FREIE PLÄTZE</div>
     <div class="lb-seg">
-      <button class="lb-btn on" id="lb-fill-human" onclick="lbSetFill('human')">Auf Spieler warten</button>
-      <button class="lb-btn" id="lb-fill-ai" onclick="lbSetFill('ai')">KI auffüllen</button>
+      <button class="lb-btn on" id="lb-fill-human" id="btn-fill-human">Auf Spieler warten</button>
+      <button class="lb-btn" id="lb-fill-ai" id="btn-fill-ai">KI auffüllen</button>
     </div>
-    <button class="lb-prim" onclick="mpCreate()">SPIEL ERSTELLEN →</button>
+    <button class="lb-prim" id="btn-create">SPIEL ERSTELLEN →</button>
 
     <div class="lb-divider"></div>
 
@@ -629,7 +629,7 @@ header{
     <div class="lb-label">SPIEL BEITRETEN</div>
     <div class="lb-join-row">
       <input class="lb-input" id="lb-join-code" placeholder="CODE" maxlength="8">
-      <button class="lb-prim" onclick="mpJoin()">BEITRETEN</button>
+      <button class="lb-prim" id="btn-join">BEITRETEN</button>
     </div>
     <input class="lb-input" id="lb-join-name" placeholder="Dein Name" maxlength="16" style="margin-top:8px" autocomplete="off">
   </div>
@@ -646,8 +646,8 @@ header{
       <div class="wt-code-url" id="wt-url"></div>
     </div>
     <div class="wt-slots" id="wt-slots"></div>
-    <button class="lb-prim" id="wt-start-btn" onclick="mpHostStart()" style="display:none">SPIEL STARTEN →</button>
-    <button class="lb-ghost" onclick="mpLeave()">Raum verlassen</button>
+    <button class="lb-prim" id="wt-start-btn" style="display:none">SPIEL STARTEN →</button>
+    <button class="lb-ghost" id="btn-leave">Raum verlassen</button>
   </div>
 </div>
 
@@ -1977,6 +1977,20 @@ function mpMyTurn(){
 // INIT
 // ═══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
+  // Attach all button listeners explicitly (avoids onclick strict-mode issues)
+  const $ = id => document.getElementById(id);
+  const on = (id, fn) => { const el=$(id); if(el) el.addEventListener('click', fn); };
+  
+  on('btn-solo', startSolo);
+  on('btn-create', mpCreate);
+  on('btn-join', mpJoin);
+  on('btn-leave', mpLeave);
+  on('wt-start-btn', mpHostStart);
+  on('btn-count-2', () => lbSetCount(2));
+  on('btn-count-3', () => lbSetCount(3));
+  on('btn-count-4', () => lbSetCount(4));
+  on('btn-fill-human', () => lbSetFill('human'));
+  on('btn-fill-ai', () => lbSetFill('ai'));
   // Check for auto-join URL param
   const code=new URLSearchParams(location.search).get('join');
   if(code){
