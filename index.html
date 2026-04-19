@@ -1623,8 +1623,9 @@ function renderHandOnly(){
 
 function render(){
   if(!G)return;
-  const myTurn=Number(G.currentPlayer)===(MP.on?Number(MP.myIdx):0);
-  const canDraw=myTurn&&!G.mustDiscard&&G.phase==='playing'&&G.hands[0].length<HS+1;
+  const _hIdx=MP.on?Number(MP.myIdx):0;
+  const myTurn=Number(G.currentPlayer)===_hIdx;
+  const canDraw=myTurn&&!G.mustDiscard&&G.phase==='playing'&&(G.hands[_hIdx]||[]).length<HS+1;
   const goOut=G.phase==='goOutDiscard';
 
   // Status
