@@ -1005,7 +1005,7 @@ const RO={A:1,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13};
 const RV={A:11,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:10,Q:10,K:10};
 const SO={'♠':0,'♥':1,'♦':2,'♣':3,'★':4};
 const JOKER_V=20;
-const NP=3,HS=10,MAX=100;
+let NP=3;const HS=10,MAX=100;
 const ALL_AI=['Dani','Holly','Julia','Joschi'];
 
 // ── GAME LOGIC ─────────────────────────────────────────────
@@ -1916,8 +1916,7 @@ function mpUpdateWaiting(room){
 }
 
 async function mpHostStart(){
-  console.log('mpHostStart called, host='+MP.host+' roomRef='+!!MP.roomRef);
-  alert('START CLICKED! host='+MP.host+' ref='+!!MP.roomRef+' NP='+MP.NP);
+
   if(!MP.host||!MP.roomRef){
     alert('Fehler: Kein Raum aktiv');
     return;
