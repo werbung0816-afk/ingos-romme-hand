@@ -1916,7 +1916,13 @@ function mpUpdateWaiting(room){
 }
 
 async function mpHostStart(){
-  if(!MP.host||!MP.roomRef)return;
+  console.log('mpHostStart called, host='+MP.host+' roomRef='+!!MP.roomRef);
+  alert('START CLICKED! host='+MP.host+' ref='+!!MP.roomRef+' NP='+MP.NP);
+  if(!MP.host||!MP.roomRef){
+    alert('Fehler: Kein Raum aktiv');
+    return;
+  }
+  try{
   const snap=await MP.roomRef.once('value');
   const room=snap.val();
   const players=Object.values(room.players||{});
@@ -1948,6 +1954,10 @@ async function mpHostStart(){
   const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
   render();
   MP.schedAI();
+  }catch(e){
+    alert('Start-Fehler: '+e.message);
+    console.error(e);
+  }
 }
 
 function mpLeave(){
