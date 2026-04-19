@@ -1559,10 +1559,11 @@ function renderDeckStack(count){
 
 function renderHandOnly(){
   if(!G)return;
-  const myTurn=Number(G.currentPlayer)===(MP.on?Number(MP.myIdx):0);
+  const _hIdx=MP.on?Number(MP.myIdx):0;
+  const myTurn=Number(G.currentPlayer)===_hIdx;
   const goOut=G.phase==='goOutDiscard';
   const clickable=myTurn&&G.mustDiscard;
-  document.getElementById('hand-count').textContent=`${G.hands[0].length} Karten`;
+  document.getElementById('hand-count').textContent=`${(G.hands[_hIdx]||[]).length} Karten`;
   const hint=document.getElementById('hint');
   hint.className='hint'+(clickable&&!goOut?' visible':'');
   const cardsEl=document.getElementById('hand-cards');
@@ -1930,7 +1931,7 @@ async function mpHostStart(){
   }
   MP.players=players;
   const names=players.map(p=>p.name);
-  // Use single-player deal() function with MP player count
+  NP=MP.NP; // Set global NP for deal()
   const initContrib=Array(MP.NP).fill(2);
   G=deal(Array(MP.NP).fill(0),1,[],names,initContrib,MP.NP*2);
   G.message=G.mustDiscard
