@@ -618,8 +618,8 @@ header{
     </div>
     <div class="lb-label" style="margin-top:12px">FREIE PLÄTZE</div>
     <div class="lb-seg">
-      <button class="lb-btn on" id="lb-fill-human" id="btn-fill-human">Auf Spieler warten</button>
-      <button class="lb-btn" id="lb-fill-ai" id="btn-fill-ai">KI auffüllen</button>
+      <button class="lb-btn on" id="btn-fill-human">Auf Spieler warten</button>
+      <button class="lb-btn" id="btn-fill-ai">KI auffüllen</button>
     </div>
     <button class="lb-prim" id="btn-create">SPIEL ERSTELLEN →</button>
 
@@ -737,11 +737,6 @@ header{
     </div>
     <div class="hint" id="hint">Karte antippen zum Ablegen · Ziehen zum Umsortieren</div>
     <div class="cards" id="hand-cards"></div>
-  </div>
-
-  <div class="mp-teaser">
-    <span>⚡</span>
-    <span>Multiplayer gegen echte Spieler — coming soon</span>
   </div>
 </div>
 
@@ -1836,8 +1831,8 @@ function lbSetCount(n){
 }
 function lbSetFill(m){
   lbFill=m;
-  document.getElementById('lb-fill-human').classList.toggle('on',m==='human');
-  document.getElementById('lb-fill-ai').classList.toggle('on',m==='ai');
+  document.getElementById('btn-fill-human').classList.toggle('on',m==='human');
+  document.getElementById('btn-fill-ai').classList.toggle('on',m==='ai');
 }
 
 function startSolo(){
@@ -1875,7 +1870,12 @@ async function mpJoin(){
   const room=snap.val();
   if(!room){alert('Raum nicht gefunden!');return;}
   if(room.status!=='waiting'){alert('Spiel bereits gestartet!');return;}
-  const players=Object.values(room.players||{});
+  // Firebase stores arrays as objects - use index-based extraction
+  const rawPlayers = room.players || {};
+  const players = [];
+  for(let i=0;i<MP.NP;i++){
+    players[i] = rawPlayers[i] || {name:'',ai:false,empty:true};
+  }
   const slot=players.findIndex((p,i)=>i>0&&(!p||p.empty||!p.name));
   if(slot===-1){alert('Raum ist voll!');return;}
   MP.myName=name;MP.host=false;MP.myIdx=slot;MP.NP=room.NP||3;
@@ -1897,7 +1897,14 @@ function mpShowWaiting(){
 }
 
 function mpUpdateWaiting(room){
-  const players=room?Object.values(room.players||{}):MP.players;
+  let players;
+  if(room){
+    const rp=room.players||{};
+    players=[];
+    for(let i=0;i<MP.NP;i++) players[i]=rp[i]||{name:'',ai:false,empty:true};
+  } else {
+    players=MP.players;
+  }
   const list=document.getElementById('wt-slots');
   list.innerHTML='';
   players.forEach((p,i)=>{
@@ -1924,7 +1931,12 @@ async function mpHostStart(){
   try{
   const snap=await MP.roomRef.once('value');
   const room=snap.val();
-  const players=Object.values(room.players||{});
+  // Firebase stores arrays as objects - use index-based extraction
+  const rawPlayers = room.players || {};
+  const players = [];
+  for(let i=0;i<MP.NP;i++){
+    players[i] = rawPlayers[i] || {name:'',ai:false,empty:true};
+  }
   // Fill empties with AI
   const AI_POOL=['Dani','Holly','Julia','Joschi','Harry'];
   const used=players.filter(p=>p&&p.name).map(p=>p.name.toLowerCase());
