@@ -1328,10 +1328,10 @@ function showRoundEnd(){
 function showBuyIn(){
   const content=document.getElementById('buyin-content');
   content.innerHTML='';
-  const active=[...Array(NP).keys()].filter(i=>!G.eliminated.includes(i));
+  const active=[...Array(NP).keys()].filter(i=>!G.eliminated.includes(i)&&G.playerNames[i]);
   const notBuying=active.filter(i=>!G.buyInPending.includes(i));
   const worst=notBuying.length?Math.max(...notBuying.map(i=>G.scores[i])):0;
-  G.buyInPending.forEach(p=>{
+  G.buyInPending.filter(p=>G.playerNames[p]).forEach(p=>{
     const div=document.createElement('div');div.className='buy-card';
     div.innerHTML=`
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1353,7 +1353,7 @@ function showBuyIn(){
 function showGameOver(){
   launchConfetti(true);
   playGameWin();
-  const active=[...Array(NP).keys()].filter(i=>!G.eliminated.includes(i));
+  const active=[...Array(NP).keys()].filter(i=>!G.eliminated.includes(i)&&G.playerNames[i]);
   const winner=active.length?active.reduce((w,i)=>G.scores[i]<G.scores[w]?i:w,active[0]):0;
   document.getElementById('gameover-title').textContent=`🏆 ${G.playerNames[winner]} gewinnt!`;
   const gc=document.getElementById('gameover-content');
