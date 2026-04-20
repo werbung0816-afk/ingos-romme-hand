@@ -769,7 +769,7 @@ const MP={
     if(!this.on||!this.host||!G||G.phase!=='playing')return;
     const p=Number(G.currentPlayer);
     const pl=this.players[p];
-    console.log('schedAI: p='+p+' player='+JSON.stringify(pl)+' players='+JSON.stringify(this.players.map(x=>x&&x.name+'(ai='+x.ai+')')));
+    console.log('schedAI p='+p+' ai='+pl?.ai+' name='+pl?.name);
     if(pl&&pl.ai===true){
       clearTimeout(aiTimer);aiTimer=setTimeout(runAI,800);
     }
@@ -779,7 +779,15 @@ const MP={
     if(!this.roomRef)return;
     this._listener=this.roomRef.on('value',snap=>{
       const room=snap.val();if(!room)return;
-      if(room.status==='waiting'){mpRenderWaiting(room);return;}
+      if(room.status==='waiting'){
+        // Update players cache even in waiting state
+        if(room.players){
+          this.NP=room.NP||this.NP; NP=this.NP;
+          this.players=[];
+          for(let i=0;i<this.NP;i++) this.players[i]=room.players[i]||{name:'',ai:false,empty:true};
+        }
+        mpRenderWaiting(room);return;
+      }
       if(room.status==='playing'&&room.gameState){
         // Update players cache
         if(room.players){
@@ -1911,16 +1919,20 @@ async function mpHostStart(){
     const rp=room.players||{};
     const players=[];
     for(let i=0;i<np;i++)players[i]=rp[i]||{name:'',ai:false,empty:true};
-    // Fill empty slots with AI
-    const used=players.filter(p=>p&&p.name).map(p=>p.name.toLowerCase());
+    // Fill truly empty slots with AI, keep real players as human
+    const used=players.filter(p=>p&&p.name&&!p.empty).map(p=>p.name.toLowerCase());
     const pool=AI_POOL.filter(n=>!used.includes(n.toLowerCase()));
     let pi=0;
     for(let i=0;i<np;i++){
       if(!players[i]||players[i].empty||!players[i].name){
+        // Truly empty - fill with AI
         players[i]={name:pool[pi++%pool.length],ai:true};
+      } else {
+        // Real player - ensure ai=false
+        players[i]={...players[i],ai:false};
       }
     }
-    console.log('mpHostStart players after fill:', JSON.stringify(players));
+    console.log('mpHostStart players:', JSON.stringify(players));
     MP.players=players;
     // NP = total filled players (all slots should be filled now)
     const actualNP=players.length;
