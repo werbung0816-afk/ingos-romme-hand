@@ -781,16 +781,22 @@ const MP={
         // Update players cache
         if(room.players){
           this.NP=room.NP||this.NP;
+          NP=this.NP;
           this.players=[];
-          for(let i=0;i<this.NP;i++)this.players[i]=room.players[i]||{name:'',ai:false};
+          for(let i=0;i<this.NP;i++){
+            this.players[i]=room.players[i]||{name:'',ai:false};
+          }
         }
         // Set MP active for ALL players when game starts
         MP.on = true;
         NP = room.NP || MP.NP;
         MP.NP = NP;
-        // Re-confirm myIdx by matching name
+        // Always update players from Firebase (authoritative source)
         if(room.players){
           const rp = room.players;
+          MP.players = [];
+          for(let i=0;i<NP;i++) MP.players[i] = rp[i] || {name:'',ai:false};
+          // Re-confirm myIdx
           for(let i=0;i<NP;i++){
             if(rp[i]&&rp[i].name===MP.myName&&!rp[i].ai){
               MP.myIdx=i; break;
@@ -1560,13 +1566,7 @@ function render(){
   if(!G)return;
   const _hIdx=MP.on?Number(MP.myIdx):0;
   const myTurn=Number(G.currentPlayer)===_hIdx;
-  // Debug: show state in status bar
-  if(MP.on){
-    const dbg=document.getElementById('status-msg');
-    if(dbg&&!myTurn){
-      dbg.textContent=`Warte... (du=Spieler ${_hIdx}, dran=Spieler ${G.currentPlayer})`;
-    }
-  }
+
   const canDraw=myTurn&&!G.mustDiscard&&G.phase==='playing'&&(G.hands[_hIdx]||[]).length<HS+1;
   const goOut=G.phase==='goOutDiscard';
 
