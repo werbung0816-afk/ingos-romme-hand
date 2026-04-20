@@ -1876,10 +1876,10 @@ async function mpHostStart(){
       }
     }
     MP.players=players;
-    // Only count players with names
-    const actualNP=players.filter(p=>p&&p.name).length;
+    // NP = total filled players (all slots should be filled now)
+    const actualNP=players.length;
     NP=actualNP;MP.NP=actualNP;
-    const names=players.filter(p=>p&&p.name).map(p=>p.name);
+    const names=players.map(p=>p.name);
     const contrib=Array(actualNP).fill(2);
     G=deal(Array(actualNP).fill(0),1,[],names,contrib,actualNP*2);
     G.message=G.mustDiscard
