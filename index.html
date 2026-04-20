@@ -784,6 +784,15 @@ const MP={
           this.players=[];
           for(let i=0;i<this.NP;i++)this.players[i]=room.players[i]||{name:'',ai:false};
         }
+        // Re-confirm myIdx by matching name (important for joining players)
+        if(room.players && !MP.host){
+          const rp = room.players;
+          for(let i=0;i<MP.NP;i++){
+            if(rp[i]&&rp[i].name===MP.myName&&!rp[i].ai){
+              MP.myIdx=i; NP=MP.NP; break;
+            }
+          }
+        }
         const raw=room.gameState;
         if(!G||raw.ts>(G.ts||0)){
           const oldPhase=G?G.phase:null;
@@ -1751,15 +1760,30 @@ document.getElementById('btn-vsort').addEventListener('click',()=>{
 // MP PUSH HOOKS (add after each action)
 // ═══════════════════════════════════════════
 const _origDoDiscard=doDiscard;
-doDiscard=function(cardId){_origDoDiscard(cardId);if(MP.on&&MP.host){MP.push();MP.schedAI();}};
+doDiscard=function(cardId){
+  if(MP.on&&!MP.host){
+    // Non-host: send action to Firebase for host to process
+    // For now just run locally and push - host will sync back
+    _origDoDiscard(cardId);
+    if(MP.on)MP.push(); // Non-host pushes their action
+    return;
+  }
+  _origDoDiscard(cardId);
+  if(MP.on&&MP.host){MP.push();MP.schedAI();}
+};
 const _origDoDraw=doDraw;
-doDraw=function(){_origDoDraw();if(MP.on&&MP.host)MP.push();};
+doDraw=function(){_origDoDraw();if(MP.on)MP.push();};
 const _origDoDrawDiscard=doDrawDiscard;
-doDrawDiscard=function(){_origDoDrawDiscard();if(MP.on&&MP.host)MP.push();};
+doDrawDiscard=function(){_origDoDrawDiscard();if(MP.on)MP.push();};
 const _origEndRound=endRound;
 endRound=function(){_origEndRound();if(MP.on&&MP.host){MP.push();MP.schedAI();}};
 const _origDoBuyIn=doBuyIn;
 doBuyIn=function(pi,yes){_origDoBuyIn(pi,yes);if(MP.on&&MP.host){MP.push();MP.schedAI();}};
+
+const _origTryGoOut=tryGoOut;
+tryGoOut=function(){_origTryGoOut();if(MP.on)MP.push();};
+const _origConfirmGoOut=confirmGoOut;
+confirmGoOut=function(){_origConfirmGoOut();if(MP.on)MP.push();};
 
 // runAI: only on host
 const _origRunAI=runAI;
