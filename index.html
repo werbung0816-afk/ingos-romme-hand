@@ -784,12 +784,16 @@ const MP={
           this.players=[];
           for(let i=0;i<this.NP;i++)this.players[i]=room.players[i]||{name:'',ai:false};
         }
-        // Re-confirm myIdx by matching name (important for joining players)
-        if(room.players && !MP.host){
+        // Set MP active for ALL players when game starts
+        MP.on = true;
+        NP = room.NP || MP.NP;
+        MP.NP = NP;
+        // Re-confirm myIdx by matching name
+        if(room.players){
           const rp = room.players;
-          for(let i=0;i<MP.NP;i++){
+          for(let i=0;i<NP;i++){
             if(rp[i]&&rp[i].name===MP.myName&&!rp[i].ai){
-              MP.myIdx=i; NP=MP.NP; break;
+              MP.myIdx=i; break;
             }
           }
         }
@@ -1850,6 +1854,7 @@ async function mpJoin(){
   MP.roomCode=code;
   players[slot]={name,ai:false};
   MP.players=players;
+  MP.on=true; // Mark as multiplayer participant
   await MP.roomRef.child('players').set(players);
   mpShowWaiting();MP.listen();
 }
