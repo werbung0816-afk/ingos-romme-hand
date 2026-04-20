@@ -769,7 +769,6 @@ const MP={
     if(!this.on||!this.host||!G||G.phase!=='playing')return;
     const p=Number(G.currentPlayer);
     const pl=this.players[p];
-    console.log('schedAI p='+p+' ai='+pl?.ai+' name='+pl?.name);
     if(pl&&pl.ai===true){
       clearTimeout(aiTimer);aiTimer=setTimeout(runAI,800);
     }
@@ -1154,8 +1153,16 @@ function aiGoOut(p, hand, dp, disc){
 }
 
 function runAI(){
-  if(!G||G.phase!=='playing'||G.currentPlayer===0)return;
+  if(!G||G.phase!=='playing')return;
   const p=G.currentPlayer;
+  // In solo: skip player 0 (human). In multi: skip non-AI players
+  if(MP.on){
+    if(p===MP.myIdx)return; // never AI-play myself
+    const pl=MP.players[p];
+    if(!pl||pl.ai!==true)return; // skip real human players
+  } else {
+    if(p===0)return; // solo: player 0 is human
+  }
   let dp=[...G.drawPile],disc=[...G.discardPile];
 
   // If AI is first player with 11 cards, skip draw
@@ -1932,7 +1939,6 @@ async function mpHostStart(){
         players[i]={...players[i],ai:false};
       }
     }
-    console.log('mpHostStart players:', JSON.stringify(players));
     MP.players=players;
     // NP = total filled players (all slots should be filled now)
     const actualNP=players.length;
