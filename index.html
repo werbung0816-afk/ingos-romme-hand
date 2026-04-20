@@ -1560,6 +1560,13 @@ function render(){
   if(!G)return;
   const _hIdx=MP.on?Number(MP.myIdx):0;
   const myTurn=Number(G.currentPlayer)===_hIdx;
+  // Debug: show state in status bar
+  if(MP.on){
+    const dbg=document.getElementById('status-msg');
+    if(dbg&&!myTurn){
+      dbg.textContent=`Warte... (du=Spieler ${_hIdx}, dran=Spieler ${G.currentPlayer})`;
+    }
+  }
   const canDraw=myTurn&&!G.mustDiscard&&G.phase==='playing'&&(G.hands[_hIdx]||[]).length<HS+1;
   const goOut=G.phase==='goOutDiscard';
 
