@@ -1797,14 +1797,15 @@ document.getElementById('btn-vsort').addEventListener('click',()=>{
 const _origDoDiscard=doDiscard;
 doDiscard=function(cardId){
   if(MP.on&&!MP.host){
-    // Non-host: send action to Firebase for host to process
-    // For now just run locally and push - host will sync back
     _origDoDiscard(cardId);
-    if(MP.on)MP.push(); // Non-host pushes their action
+    if(MP.on)MP.push();
     return;
   }
   _origDoDiscard(cardId);
-  if(MP.on&&MP.host){MP.push();MP.schedAI();}
+  if(MP.on&&MP.host){
+    console.log('After discard: cur='+G.currentPlayer+' eliminated='+JSON.stringify(G.eliminated)+' NP='+NP+' players='+JSON.stringify(MP.players.map(p=>p?.name+'(ai='+p?.ai+')')));
+    MP.push();MP.schedAI();
+  }
 };
 const _origDoDraw=doDraw;
 doDraw=function(){_origDoDraw();if(MP.on)MP.push();};
