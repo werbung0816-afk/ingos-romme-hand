@@ -1207,8 +1207,8 @@ function scheduleAI(){
 // ── PLAYER ACTIONS ─────────────────────────────────────────
 function doDraw(){
   const _hIdx=MP.on?Number(MP.myIdx):0;
-  if(!G||G.currentPlayer!==0||G.mustDiscard||G.phase!=='playing')return;
-  if(G.hands[_hIdx].length>=HS+1)return;
+  if(!G||Number(G.currentPlayer)!==_hIdx||G.mustDiscard||G.phase!=='playing')return;
+  if((G.hands[_hIdx]||[]).length>=HS+1)return;
   let dp=[...G.drawPile],disc=[...G.discardPile];
   if(!dp.length){const top=disc.pop();dp=shuf(disc);disc=top?[top]:[];}
   if(!dp.length){G.message='Keine Karten mehr!';render();return;}
@@ -1221,8 +1221,8 @@ function doDraw(){
 
 function doDrawDiscard(){
   const _hIdx=MP.on?Number(MP.myIdx):0;
-  if(!G||G.currentPlayer!==0||G.mustDiscard||G.phase!=='playing')return;
-  if(G.hands[_hIdx].length>=HS+1)return;
+  if(!G||Number(G.currentPlayer)!==_hIdx||G.mustDiscard||G.phase!=='playing')return;
+  if((G.hands[_hIdx]||[]).length>=HS+1)return;
   const disc=[...G.discardPile];
   if(!disc.length)return;
   const card=disc.pop();
@@ -1234,7 +1234,7 @@ function doDrawDiscard(){
 
 function doDiscard(cardId){
   const _hIdx=MP.on?Number(MP.myIdx):0;
-  if(!G||G.currentPlayer!==0||!G.mustDiscard)return;
+  if(!G||Number(G.currentPlayer)!==_hIdx||!G.mustDiscard)return;
   if(G.phase==='goOutDiscard'){doGoOutFinal(cardId);return;}
   const h=G.hands[_hIdx];
   const c=h.find(x=>x.id===cardId);if(!c)return;
@@ -1249,7 +1249,7 @@ function doDiscard(cardId){
 
 function tryGoOut(){
   const _hIdx=MP.on?Number(MP.myIdx):0;
-  if(!G||G.phase!=='playing'||G.currentPlayer!==0||!G.mustDiscard)return;
+  if(!G||G.phase!=='playing'||Number(G.currentPlayer)!==_hIdx||!G.mustDiscard)return;
   const h=G.hands[_hIdx];
   if(h.length!==HS+1){
     G.message='Erst eine Karte ziehen!';render();return;
