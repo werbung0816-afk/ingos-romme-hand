@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Rommé Hand">
 <meta name="theme-color" content="#d4af37">
-<title>Ingo's Rommé Hand</title>
+<title>Ingo's Rommé Hand v3</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/firebase@10.8.1/firebase-app-compat.js"></script>
 <script src="https://unpkg.com/firebase@10.8.1/firebase-database-compat.js"></script>
@@ -791,6 +791,7 @@ const MP={
           G=mpFixArrays(raw);
           if(document.getElementById('screen-game').style.display!=='block'){
             document.getElementById('screen-waiting').classList.remove('active');
+            document.getElementById('screen-name').style.display='none';
             document.getElementById('screen-game').style.display='block';
             handOrder=null;
             const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
@@ -1887,6 +1888,7 @@ async function mpHostStart(){
     G.ts=Date.now();MP.on=true;
     await MP.roomRef.update({status:'playing',players,gameState:G});
     document.getElementById('screen-waiting').classList.remove('active');
+    document.getElementById('screen-name').style.display='none';
     document.getElementById('screen-game').style.display='block';
     handOrder=null;
     const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
