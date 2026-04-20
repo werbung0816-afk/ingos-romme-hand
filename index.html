@@ -1303,6 +1303,7 @@ function showRoundEnd(){
   const res=document.getElementById('round-results');
   res.innerHTML='';
   G.playerNames.forEach((name,i)=>{
+    if(!name&&name!==0)return; // skip undefined slots
     if(G.eliminated.includes(i))return;
     const p2=i===G.roundWinner?0:pen(G.hands[i]);
     const hand=G.hands[i]||[];
@@ -1873,10 +1874,13 @@ async function mpHostStart(){
         players[i]={name:pool[pi++%pool.length],ai:true};
       }
     }
-    MP.players=players;NP=np;MP.NP=np;
-    const names=players.map(p=>p.name);
-    const contrib=Array(np).fill(2);
-    G=deal(Array(np).fill(0),1,[],names,contrib,np*2);
+    MP.players=players;
+    // Only count players with names
+    const actualNP=players.filter(p=>p&&p.name).length;
+    NP=actualNP;MP.NP=actualNP;
+    const names=players.filter(p=>p&&p.name).map(p=>p.name);
+    const contrib=Array(actualNP).fill(2);
+    G=deal(Array(actualNP).fill(0),1,[],names,contrib,actualNP*2);
     G.message=G.mustDiscard
       ?`${names[0]}, du hast 11 Karten — leg ab oder drück FERTIG!`
       :`${names[0]}, dein Zug — Karte ziehen!`;
