@@ -732,6 +732,14 @@ header{
 'use strict';
 
 // ═══════════════════════════════════════════
+// ME — der globale "ich"-Index
+// Solo: ME=0 (immer Spieler 0)
+// Multiplayer: ME=myIdx (mein Slot im players-Array)
+// Alle Spieler-Aktionen und Render-Checks verwenden ME statt hardcoded 0
+// ═══════════════════════════════════════════
+let ME = 0; // wird in mpJoin/mpCreate gesetzt
+
+// ═══════════════════════════════════════════
 // FIREBASE
 // ═══════════════════════════════════════════
 const FB_CFG = {
@@ -806,10 +814,10 @@ const MP={
           const rp = room.players;
           MP.players = [];
           for(let i=0;i<NP;i++) MP.players[i] = rp[i] || {name:'',ai:false};
-          // Re-confirm myIdx
+          // Re-confirm myIdx and update ME
           for(let i=0;i<NP;i++){
             if(rp[i]&&rp[i].name===MP.myName&&!rp[i].ai){
-              MP.myIdx=i; break;
+              MP.myIdx=i; ME=i; break;
             }
           }
         }
@@ -1155,15 +1163,23 @@ function aiGoOut(p, hand, dp, disc){
 function runAI(){
   if(!G||G.phase!=='playing')return;
   const p=G.currentPlayer;
-  // In solo: skip player 0 (human). In multi: skip non-AI players
+  // In solo: skip player ME (Mensch). In multi: nur auf Host, nur AI-Spieler
   if(MP.on){
-    if(p===MP.myIdx)return; // never AI-play myself
+    if(!MP.host)return;
+    if(p===ME)return;
     const pl=MP.players[p];
-    if(!pl||pl.ai!==true)return; // skip real human players
+    if(!pl||pl.ai!==true)return;
   } else {
-    if(p===0)return; // solo: player 0 is human
+    if(p===ME)return; // solo: ME=0 ist der Mensch
   }
   let dp=[...G.drawPile],disc=[...G.discardPile];
+
+  // Hilfsfunktion: Nachricht nach AI-Zug
+  function nextMsg(nxt){
+    return nxt===ME
+      ?`${G.playerNames[ME]}, dein Zug — Karte ziehen!`
+      :`${G.playerNames[nxt]} denkt...`;
+  }
 
   // If AI is first player with 11 cards, skip draw
   if(G.hands[p].length===HS+1){
@@ -1174,7 +1190,7 @@ function runAI(){
     const nxt=nextAct(p,G.eliminated);
     G={...G,hands:G.hands.map((h,i)=>i===p?fh:h),
       drawPile:dp,discardPile:disc,currentPlayer:nxt,mustDiscard:false,
-      message:nxt===0?`${G.playerNames[0]}, dein Zug — Karte ziehen!`:`${G.playerNames[nxt]} denkt...`};
+      message:nextMsg(nxt)};
     render();scheduleAI();return;
   }
 
@@ -1188,69 +1204,74 @@ function runAI(){
   }else drawn=dp.pop();
   const nh=[...G.hands[p],drawn];
 
-  // Always check if AI can go out with the drawn hand
   if(aiGoOut(p, nh, dp, disc))return;
   const dis=aiBest(nh);const fh=nh.filter(c=>c.id!==dis.id);disc.push(dis);
   const nxt=nextAct(p,G.eliminated);
   G={...G,hands:G.hands.map((h,i)=>i===p?fh:h),
     drawPile:dp,discardPile:disc,currentPlayer:nxt,mustDiscard:false,
-    message:nxt===0?`${G.playerNames[0]}, dein Zug — Karte ziehen!`:`${G.playerNames[nxt]} denkt...`};
+    message:nextMsg(nxt)};
   render();scheduleAI();
 }
 
 function scheduleAI(){
   clearTimeout(aiTimer);
-  if(!G||G.phase!=='playing'||G.currentPlayer===0)return;
+  if(!G||G.phase!=='playing')return;
+  // In solo: skip wenn Spieler 0 (Mensch) dran ist
+  // In MP: AI-timer nur auf Host; skip wenn current player kein AI ist
+  if(MP.on){
+    if(!MP.host)return; // Nicht-Host feuert keinen AI-Timer
+    const pl=MP.players[Number(G.currentPlayer)];
+    if(!pl||pl.ai!==true)return; // Kein AI-Timer für menschliche Spieler
+  } else {
+    if(G.currentPlayer===0)return; // Solo: Spieler 0 = Mensch
+  }
   aiTimer=setTimeout(runAI,950);
 }
 
 // ── PLAYER ACTIONS ─────────────────────────────────────────
 function doDraw(){
-  const _hIdx=MP.on?Number(MP.myIdx):0;
-  if(!G||Number(G.currentPlayer)!==_hIdx||G.mustDiscard||G.phase!=='playing')return;
-  if((G.hands[_hIdx]||[]).length>=HS+1)return;
+  if(!G||Number(G.currentPlayer)!==ME||G.mustDiscard||G.phase!=='playing')return;
+  if((G.hands[ME]||[]).length>=HS+1)return;
   let dp=[...G.drawPile],disc=[...G.discardPile];
   if(!dp.length){const top=disc.pop();dp=shuf(disc);disc=top?[top]:[];}
   if(!dp.length){G.message='Keine Karten mehr!';render();return;}
   const card=dp.pop();
-  const nh=ssort([...G.hands[_hIdx],card]);
-  playDraw();G={...G,hands:G.hands.map((h,i)=>i===_hIdx?nh:h),drawPile:dp,discardPile:disc,
+  const nh=ssort([...G.hands[ME],card]);
+  playDraw();G={...G,hands:G.hands.map((h,i)=>i===ME?nh:h),drawPile:dp,discardPile:disc,
     mustDiscard:true,message:'Gezogen — Karte ablegen oder FERTIG! drücken.'};
   render();
 }
 
 function doDrawDiscard(){
-  const _hIdx=MP.on?Number(MP.myIdx):0;
-  if(!G||Number(G.currentPlayer)!==_hIdx||G.mustDiscard||G.phase!=='playing')return;
-  if((G.hands[_hIdx]||[]).length>=HS+1)return;
+  if(!G||Number(G.currentPlayer)!==ME||G.mustDiscard||G.phase!=='playing')return;
+  if((G.hands[ME]||[]).length>=HS+1)return;
   const disc=[...G.discardPile];
   if(!disc.length)return;
   const card=disc.pop();
-  const nh=ssort([...G.hands[_hIdx],card]);
-  playDraw();G={...G,hands:G.hands.map((h,i)=>i===_hIdx?nh:h),discardPile:disc,
+  const nh=ssort([...G.hands[ME],card]);
+  playDraw();G={...G,hands:G.hands.map((h,i)=>i===ME?nh:h),discardPile:disc,
     mustDiscard:true,message:`${card.j?'Joker':card.r+card.s} vom Ablagestapel — leg ab oder FERTIG!`};
   render();
 }
 
 function doDiscard(cardId){
-  const _hIdx=MP.on?Number(MP.myIdx):0;
-  if(!G||Number(G.currentPlayer)!==_hIdx||!G.mustDiscard)return;
+  if(!G||Number(G.currentPlayer)!==ME||!G.mustDiscard)return;
   if(G.phase==='goOutDiscard'){doGoOutFinal(cardId);return;}
-  const h=G.hands[_hIdx];
+  const h=G.hands[ME];
   const c=h.find(x=>x.id===cardId);if(!c)return;
   const nh=h.filter(x=>x.id!==cardId);
   const disc=[...G.discardPile,c];
-  const nxt=nextAct(_hIdx,G.eliminated);
-  playDiscard();G={...G,hands:G.hands.map((x,i)=>i===0?nh:x),
+  const nxt=nextAct(ME,G.eliminated);
+  const myName=G.playerNames[ME];
+  playDiscard();G={...G,hands:G.hands.map((x,i)=>i===ME?nh:x),
     discardPile:disc,currentPlayer:nxt,mustDiscard:false,
-    message:nxt===0?`${G.playerNames[0]}, dein Zug — Karte ziehen!`:`${G.playerNames[nxt]} denkt...`};
+    message:nxt===ME?`${myName}, dein Zug — Karte ziehen!`:`${G.playerNames[nxt]} denkt...`};
   render();scheduleAI();
 }
 
 function tryGoOut(){
-  const _hIdx=MP.on?Number(MP.myIdx):0;
-  if(!G||G.phase!=='playing'||Number(G.currentPlayer)!==_hIdx||!G.mustDiscard)return;
-  const h=G.hands[_hIdx];
+  if(!G||G.phase!=='playing'||Number(G.currentPlayer)!==ME||!G.mustDiscard)return;
+  const h=G.hands[ME];
   if(h.length!==HS+1){
     G.message='Erst eine Karte ziehen!';render();return;
   }
@@ -1261,7 +1282,6 @@ function tryGoOut(){
   if(!validDiscards.length){
     G.message='Karten passen noch nicht — du kannst nicht raus!';render();return;
   }
-  // If only one valid discard → go straight to goOutDiscard
   if(validDiscards.length===1){
     const dc=validDiscards[0];
     const rem=h.filter(x=>x.id!==dc.id);
@@ -1270,7 +1290,6 @@ function tryGoOut(){
       message:`Tippe auf ${dc.j?'Joker':dc.r+dc.s} zum Ablegen — dann bist du fertig! ✦`};
     render();return;
   }
-  // Multiple valid discards → go directly, highlight all valid cards
   const bestDc=validDiscards[0];
   pendingArr=bestArr(h.filter(x=>x.id!==bestDc.id));
   G={...G,phase:'goOutDiscard',validDiscardIds:validDiscards.map(c=>c.id),mustDiscard:true,
@@ -1285,11 +1304,9 @@ function confirmGoOut(){
 }
 
 function doGoOutFinal(cardId){
-  const _hIdx=MP.on?Number(MP.myIdx):0;
-  const h=G.hands[_hIdx];
+  const h=G.hands[ME];
   const c=h.find(x=>x.id===cardId);if(!c)return;
   const rem=h.filter(x=>x.id!==cardId);
-  // Accept if card is in validDiscardIds OR if pen=0 or singleSuit
   const inValid=!G.validDiscardIds.length||G.validDiscardIds.includes(cardId);
   const valid=inValid&&(pen(rem)===0||isSingleSuit(rem));
   if(!valid){
@@ -1299,10 +1316,10 @@ function doGoOutFinal(cardId){
   }
   const disc=[...G.discardPile,c];
   const ns=[...G.scores];
-  for(let i=0;i<NP;i++){if(!G.eliminated.includes(i)&&i!==0)ns[i]+=pen(G.hands[i]);}
-  playRoundWin();G={...G,hands:G.hands.map((x,i)=>i===0?rem:x),
-    discardPile:disc,scores:ns,phase:'roundEnd',roundWinner:0,
-    mustDiscard:false,message:'🎉 Du bist fertig!'};
+  for(let i=0;i<NP;i++){if(!G.eliminated.includes(i)&&i!==ME)ns[i]+=pen(G.hands[i]);}
+  playRoundWin();G={...G,hands:G.hands.map((x,i)=>i===ME?rem:x),
+    discardPile:disc,scores:ns,phase:'roundEnd',roundWinner:ME,
+    mustDiscard:false,message:`🎉 ${G.playerNames[ME]} ist fertig!`};
   render();showRoundEnd();
 }
 
@@ -1337,7 +1354,7 @@ function showFertigModal(arr){
 function showRoundEnd(){
   launchConfetti(false);
   const title=document.getElementById('round-title');
-  title.textContent=G.roundWinner===0?'🎉 Du bist fertig!':`${G.playerNames[G.roundWinner]} ist fertig!`;
+  title.textContent=G.roundWinner===ME?`🎉 ${G.playerNames[ME]} ist fertig!`:`${G.playerNames[G.roundWinner]} ist fertig!`;
   const res=document.getElementById('round-results');
   res.innerHTML='';
   G.playerNames.forEach((name,i)=>{
@@ -1443,9 +1460,10 @@ function endRound(){
   if(active.length<=1){G={...G,phase:'gameOver'};showGameOver();return;}
   G=deal(G.scores,G.round+1,ne,G.playerNames,G.contributions,G.totalPot);
   handOrder=null;
+  const fp=G.currentPlayer;
   G.message=G.mustDiscard
-    ?`${G.playerNames[0]}, du hast 11 Karten — leg ab oder drück FERTIG!`
-    :`${G.playerNames[0]}, dein Zug — Karte ziehen!`;
+    ?`${G.playerNames[fp]} hat 11 Karten — ${fp===ME?'leg ab oder drück FERTIG!':'wartet auf Zug'}`
+    :(fp===ME?`${G.playerNames[ME]}, dein Zug — Karte ziehen!`:`${G.playerNames[fp]} denkt...`);
   render();scheduleAI();
 }
 
@@ -1471,9 +1489,10 @@ function doBuyIn(pi,yes){
   if(active.length<=1||underMax.length<=1){G={...G,phase:'gameOver'};showGameOver();return;}
   G=deal(ns,G.round+1,ne,G.playerNames,nc,newTotal);
   handOrder=null;
+  const fp2=G.currentPlayer;
   G.message=G.mustDiscard
-    ?`${G.playerNames[0]}, du hast 11 Karten — leg ab oder drück FERTIG!`
-    :`${G.playerNames[0]}, dein Zug — Karte ziehen!`;
+    ?`${G.playerNames[fp2]} hat 11 Karten — ${fp2===ME?'leg ab oder drück FERTIG!':'wartet auf Zug'}`
+    :(fp2===ME?`${G.playerNames[ME]}, dein Zug — Karte ziehen!`:`${G.playerNames[fp2]} denkt...`);
   const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
   render();scheduleAI();
 }
@@ -1517,25 +1536,22 @@ function renderDeckStack(count){
 
 function renderHandOnly(){
   if(!G)return;
-  const _hIdx=MP.on?Number(MP.myIdx):0;
-  const myTurn=Number(G.currentPlayer)===_hIdx;
+  const myTurn=Number(G.currentPlayer)===ME;
   const goOut=G.phase==='goOutDiscard';
   const clickable=myTurn&&G.mustDiscard;
-  document.getElementById('hand-count').textContent=`${(G.hands[_hIdx]||[]).length} Karten`;
+  document.getElementById('hand-count').textContent=`${(G.hands[ME]||[]).length} Karten`;
   const hint=document.getElementById('hint');
   hint.className='hint'+(clickable&&!goOut?' visible':'');
   const cardsEl=document.getElementById('hand-cards');
   cardsEl.innerHTML='';
-  // Apply handOrder if available:
-  let displayHand=G.hands[_hIdx]||[];
+  let displayHand=G.hands[ME]||[];
   if(handOrder&&handOrder.length){
-    const byId=Object.fromEntries((G.hands[_hIdx]||[]).map(c=>[c.id,c]));
+    const byId=Object.fromEntries((G.hands[ME]||[]).map(c=>[c.id,c]));
     const ordered=handOrder.filter(id=>byId[id]).map(id=>byId[id]);
-    // Add any new cards not yet in handOrder
-    const extra=(G.hands[_hIdx]||[]).filter(c=>!handOrder.includes(c.id));
+    const extra=(G.hands[ME]||[]).filter(c=>!handOrder.includes(c.id));
     displayHand=[...ordered,...extra];
   } else {
-    handOrder=(G.hands[_hIdx]||[]).map(c=>c.id);
+    handOrder=(G.hands[ME]||[]).map(c=>c.id);
   }
   displayHand.forEach((card,i)=>{
     const isGlow=goOut&&G.validDiscardIds.includes(card.id);
@@ -1582,16 +1598,15 @@ function renderHandOnly(){
 
 function render(){
   if(!G)return;
-  const _hIdx=MP.on?Number(MP.myIdx):0;
-  const myTurn=Number(G.currentPlayer)===_hIdx;
+  const myTurn=Number(G.currentPlayer)===ME;
   // Always show MP debug
   const dbgEl=document.getElementById('mp-debug');
   if(dbgEl){
-    dbgEl.textContent=`MP.on=${MP.on} myIdx=${MP.myIdx} host=${MP.host} cur=${G.currentPlayer} myTurn=${myTurn} hand=${G.hands[_hIdx]?.length}`;
+    dbgEl.textContent=`MP.on=${MP.on} ME=${ME} myIdx=${MP.myIdx} host=${MP.host} cur=${G.currentPlayer} myTurn=${myTurn} hand=${G.hands[ME]?.length}`;
     dbgEl.style.display='block';
   }
 
-  const canDraw=myTurn&&!G.mustDiscard&&G.phase==='playing'&&(G.hands[_hIdx]||[]).length<HS+1;
+  const canDraw=myTurn&&!G.mustDiscard&&G.phase==='playing'&&(G.hands[ME]||[]).length<HS+1;
   const goOut=G.phase==='goOutDiscard';
 
   // Status
@@ -1651,7 +1666,7 @@ function render(){
 
   // FERTIG button
   const fertigBtn=document.getElementById('btn-fertig');
-  const showFertig=G.currentPlayer===0&&G.mustDiscard&&G.phase==='playing';
+  const showFertig=Number(G.currentPlayer)===ME&&G.mustDiscard&&G.phase==='playing';
   fertigBtn.className='fertig-btn'+(showFertig?' visible':'');
 
   // Go-out hint
@@ -1660,22 +1675,22 @@ function render(){
 
   // Hand
   const clickable=myTurn&&G.mustDiscard;
-  document.getElementById('hand-count').textContent=`${(G.hands[_hIdx]||[]).length} Karten`;
+  document.getElementById('hand-count').textContent=`${(G.hands[ME]||[]).length} Karten`;
   const hint=document.getElementById('hint');
   hint.className='hint'+(clickable&&!goOut?' visible':'');
 
   const cardsEl=document.getElementById('hand-cards');
   cardsEl.innerHTML='';
   // Apply handOrder if available:
-  let displayHand=G.hands[_hIdx]||[];
+  let displayHand=G.hands[ME]||[];
   if(handOrder&&handOrder.length){
-    const byId=Object.fromEntries((G.hands[_hIdx]||[]).map(c=>[c.id,c]));
+    const byId=Object.fromEntries((G.hands[ME]||[]).map(c=>[c.id,c]));
     const ordered=handOrder.filter(id=>byId[id]).map(id=>byId[id]);
     // Add any new cards not yet in handOrder
-    const extra=(G.hands[_hIdx]||[]).filter(c=>!handOrder.includes(c.id));
+    const extra=(G.hands[ME]||[]).filter(c=>!handOrder.includes(c.id));
     displayHand=[...ordered,...extra];
   } else {
-    handOrder=(G.hands[_hIdx]||[]).map(c=>c.id);
+    handOrder=(G.hands[ME]||[]).map(c=>c.id);
   }
   displayHand.forEach((card,i)=>{
     const isGlow=goOut&&G.validDiscardIds.includes(card.id);
@@ -1729,6 +1744,7 @@ function render(){
 }
 
 function startGame(name){
+  ME=0; // Solo: immer Spieler 0
   const n=(name||'Ingo').trim()||'Ingo';
   const pool=ALL_AI.filter(x=>x.toLowerCase()!==n.toLowerCase());
   const ai=pool.sort(()=>Math.random()-.5).slice(0,2);
@@ -1759,52 +1775,29 @@ function newGame(){
   if(ce)ce._dealt=false;
 }
 
-// ── EVENT LISTENERS ────────────────────────────────────────
-document.getElementById('btn-play').addEventListener('click',()=>{
-  startGame(document.getElementById('name-input').value);
-});
-document.getElementById('name-input').addEventListener('keydown',e=>{
-  if(e.key==='Enter')startGame(document.getElementById('name-input').value);
-});
-document.getElementById('btn-draw').addEventListener('click',doDraw);
-document.getElementById('btn-draw-disc').addEventListener('click',doDrawDiscard);
-document.getElementById('btn-fertig').addEventListener('click',tryGoOut);
-document.getElementById('btn-confirm-fertig').addEventListener('click',confirmGoOut);
-document.getElementById('btn-cancel-fertig').addEventListener('click',()=>closeModal('modal-fertig'));
-document.getElementById('btn-next-round').addEventListener('click',endRound);
-document.getElementById('btn-new-game').addEventListener('click',()=>{
-  closeModal('modal-gameover');
-  document.getElementById('screen-game').style.display='none';
-  document.getElementById('screen-name').style.display='flex';
-  const ce2=document.getElementById('hand-cards');if(ce2)ce2._dealt=false;
-  clearTimeout(aiTimer);G=null;
-});
-document.getElementById('btn-ssort').addEventListener('click',()=>{
-  if(!G)return;
-  G={...G,hands:G.hands.map((h,i)=>i===_hIdx?ssort(h):h)};
-  handOrder=ssort(G.hands[_hIdx]).map(c=>c.id);renderHandOnly();
-});
-document.getElementById('btn-vsort').addEventListener('click',()=>{
-  if(!G)return;
-  G={...G,hands:G.hands.map((h,i)=>i===_hIdx?vsort(h):h)};
-  handOrder=vsort(G.hands[_hIdx]).map(c=>c.id);renderHandOnly();
-});
+// Alle Event-Listener werden im DOMContentLoaded Block registriert
 
 
 // ═══════════════════════════════════════════
 // MP PUSH HOOKS (add after each action)
 // ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+// MP PUSH HOOKS — nach jeder Aktion zu Firebase pushen
+// Host: pusht direkt den neuen G-State
+// Nicht-Host: pusht auch (liest eigenen Zug rein), Host sieht den State via Listener
+// Wichtig: Nicht-Host darf NUR seinen eigenen Zug ausführen (wird durch ME-Checks in den
+//          Aktionsfunktionen sichergestellt)
+// ═══════════════════════════════════════════
 const _origDoDiscard=doDiscard;
 doDiscard=function(cardId){
-  if(MP.on&&!MP.host){
-    _origDoDiscard(cardId);
-    if(MP.on)MP.push();
-    return;
-  }
   _origDoDiscard(cardId);
-  if(MP.on&&MP.host){
-    console.log('After discard: cur='+G.currentPlayer+' eliminated='+JSON.stringify(G.eliminated)+' NP='+NP+' players='+JSON.stringify(MP.players.map(p=>p?.name+'(ai='+p?.ai+')')));
-    MP.push();MP.schedAI();
+  if(MP.on){
+    if(MP.host){
+      console.log('[MP] After discard: cur='+G.currentPlayer+' NP='+NP);
+      MP.push();MP.schedAI();
+    } else {
+      MP.push(); // Nicht-Host pusht seinen neuen State
+    }
   }
 };
 const _origDoDraw=doDraw;
@@ -1815,13 +1808,12 @@ const _origEndRound=endRound;
 endRound=function(){_origEndRound();if(MP.on&&MP.host){MP.push();MP.schedAI();}};
 const _origDoBuyIn=doBuyIn;
 doBuyIn=function(pi,yes){_origDoBuyIn(pi,yes);if(MP.on&&MP.host){MP.push();MP.schedAI();}};
-
 const _origTryGoOut=tryGoOut;
 tryGoOut=function(){_origTryGoOut();if(MP.on)MP.push();};
 const _origConfirmGoOut=confirmGoOut;
 confirmGoOut=function(){_origConfirmGoOut();if(MP.on)MP.push();};
 
-// runAI: only on host
+// runAI: nur auf Host ausführen
 const _origRunAI=runAI;
 runAI=function(){
   if(MP.on&&!MP.host)return;
@@ -1853,6 +1845,7 @@ async function mpCreate(){
   const db=getDB();if(!db)return;
   const name=(document.getElementById('lb-host-name').value.trim()||'Ingo').substr(0,16);
   MP.myName=name;MP.host=true;MP.myIdx=0;MP.NP=lbCount;NP=lbCount;
+  ME=0; // Host ist immer Spieler 0
   MP.roomCode=genCode();
   MP.roomRef=db.ref('rooms/'+MP.roomCode);
   const used=[name.toLowerCase()];
@@ -1883,6 +1876,7 @@ async function mpJoin(){
   const slot=players.findIndex((p,i)=>i>0&&(!p||p.empty||!p.name));
   if(slot<0){alert('Raum ist voll!');return;}
   MP.myName=name;MP.host=false;MP.myIdx=slot;MP.NP=np;NP=np;
+  ME=slot; // Mein Index im players-Array
   MP.roomCode=code;
   players[slot]={name,ai:false};
   MP.players=players;
@@ -1941,15 +1935,15 @@ async function mpHostStart(){
       }
     }
     MP.players=players;
-    // NP = total filled players (all slots should be filled now)
     const actualNP=players.length;
-    NP=actualNP;MP.NP=actualNP;
+    NP=actualNP;MP.NP=actualNP;ME=0; // Host ist Spieler 0
     const names=players.map(p=>p.name);
     const contrib=Array(actualNP).fill(2);
     G=deal(Array(actualNP).fill(0),1,[],names,contrib,actualNP*2);
+    const fp=G.currentPlayer;
     G.message=G.mustDiscard
-      ?`${names[0]}, du hast 11 Karten — leg ab oder drück FERTIG!`
-      :`${names[0]}, dein Zug — Karte ziehen!`;
+      ?`${names[fp]} hat 11 Karten — ${fp===0?'leg ab oder drück FERTIG!':'wartet...'}`
+      :(fp===0?`${names[0]}, dein Zug — Karte ziehen!`:`${names[fp]} denkt...`);
     G.ts=Date.now();MP.on=true;
     await MP.roomRef.update({status:'playing',players,gameState:G});
     document.getElementById('screen-waiting').classList.remove('active');
@@ -1994,8 +1988,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   on('btn-cancel-fertig',()=>closeModal('modal-fertig'));
   on('btn-next-round',endRound);
   on('btn-new-game',()=>{closeModal('modal-gameover');document.getElementById('screen-game').style.display='none';document.getElementById('screen-name').style.display='none';document.getElementById('screen-lobby').classList.add('active');MP.stop();});
-  on('btn-ssort',()=>{if(!G)return;const h=G.hands[MP.on?MP.myIdx:0];G={...G,hands:G.hands.map((x,i)=>i===(MP.on?MP.myIdx:0)?ssort(h):x)};handOrder=ssort(G.hands[MP.on?MP.myIdx:0]).map(c=>c.id);renderHandOnly();});
-  on('btn-vsort',()=>{if(!G)return;const h=G.hands[MP.on?MP.myIdx:0];G={...G,hands:G.hands.map((x,i)=>i===(MP.on?MP.myIdx:0)?vsort(h):x)};handOrder=vsort(G.hands[MP.on?MP.myIdx:0]).map(c=>c.id);renderHandOnly();});
+  on('btn-ssort',()=>{if(!G)return;const h=G.hands[ME];G={...G,hands:G.hands.map((x,i)=>i===ME?ssort(h):x)};handOrder=ssort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
+  on('btn-vsort',()=>{if(!G)return;const h=G.hands[ME];G={...G,hands:G.hands.map((x,i)=>i===ME?vsort(h):x)};handOrder=vsort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
   document.getElementById('name-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')startGame(document.getElementById('name-input').value);});
   document.getElementById('lb-join-code')?.addEventListener('input',e=>e.target.value=e.target.value.toUpperCase());
   document.getElementById('lb-host-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')mpCreate();});
