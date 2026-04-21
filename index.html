@@ -731,13 +731,9 @@ header{
 <script>
 'use strict';
 
-// ═══════════════════════════════════════════
-// ME — der globale "ich"-Index
-// Solo: ME=0 (immer Spieler 0)
-// Multiplayer: ME=myIdx (mein Slot im players-Array)
-// Alle Spieler-Aktionen und Render-Checks verwenden ME statt hardcoded 0
-// ═══════════════════════════════════════════
-let ME = 0; // wird in mpJoin/mpCreate gesetzt
+// ═══ ME = mein Spieler-Index. Solo: 0. Multiplayer: myIdx. ═══
+// Alle Aktionen und Render-Checks nutzen ME statt hardcoded 0
+let ME = 0;
 
 // ═══════════════════════════════════════════
 // FIREBASE
@@ -777,7 +773,7 @@ const MP={
     if(!this.on||!this.host||!G||G.phase!=='playing')return;
     const p=Number(G.currentPlayer);
     const pl=this.players[p];
-    console.log(`[schedAI] cur=${p} pl=${JSON.stringify(pl)}`);
+    console.log('[schedAI] cur='+p+' player='+JSON.stringify(pl));
     if(pl&&pl.ai===true){
       clearTimeout(aiTimer);aiTimer=setTimeout(runAI,800);
     }
@@ -797,23 +793,23 @@ const MP={
         mpRenderWaiting(room);return;
       }
       if(room.status==='playing'&&room.gameState){
-        // Fix Firebase array->object for players too
-        function fixPlayers(rp, np){
-          if(!rp)return [];
-          const arr=[];
-          for(let i=0;i<np;i++) arr[i]=rp[i]||{name:'',ai:false};
-          return arr;
-        }
+        // Firebase kann Arrays in Objekte konvertieren — hier normalisieren
         const np=room.NP||MP.NP||3;
-        NP=np; MP.NP=np; MP.on=true;
-        // Always rebuild players from Firebase (authoritative)
+        NP=np;MP.NP=np;MP.on=true;
+        // players aus Firebase lesen und normalisieren
         if(room.players){
-          MP.players=fixPlayers(room.players, np);
-          // Re-confirm myIdx and ME for non-host
+          const rp=room.players;
+          MP.players=[];
+          for(let i=0;i<np;i++){
+            // rp[i] kann undefined sein wenn Firebase Array→Object konvertiert hat
+            MP.players[i]=rp[i]||{name:'',ai:false};
+          }
+          console.log('[listen] players='+JSON.stringify(MP.players));
+          // Für Nicht-Host: myIdx und ME aktualisieren
           if(!MP.host){
             for(let i=0;i<np;i++){
               if(MP.players[i]&&MP.players[i].name===MP.myName&&!MP.players[i].ai){
-                MP.myIdx=i; ME=i; break;
+                MP.myIdx=i;ME=i;break;
               }
             }
           }
@@ -821,6 +817,7 @@ const MP={
         const raw=room.gameState;
         if(!G||raw.ts>(G.ts||0)){
           const oldPhase=G?G.phase:null;
+          // Fix Firebase array->object conversion
           G=mpFixArrays(raw);
           if(document.getElementById('screen-game').style.display!=='block'){
             document.getElementById('screen-waiting').classList.remove('active');
@@ -839,11 +836,8 @@ const MP={
               const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
             }
           }
-          // Host: schedule AI if current player is AI
           if(MP.host&&G.phase==='playing'){
-            const curP=Number(G.currentPlayer);
-            const pl=MP.players[curP];
-            console.log(`[MP.listen] cur=${curP} pl=${JSON.stringify(pl)} ai=${pl?.ai}`);
+            console.log('[listen] calling schedAI for cur='+G.currentPlayer);
             this.schedAI();
           }
         }
@@ -1120,7 +1114,7 @@ function deal(scores,round,elim,names,contributions,totalPot){
   while(fd&&fd.j&&dp.length){dp.unshift(fd);fd=dp.pop();}
   return{
     phase:'playing',hands,drawPile:dp,discardPile:fd?[fd]:[],
-    currentPlayer:fp,mustDiscard:fp===0,
+    currentPlayer:fp,mustDiscard:true, // fp always gets 11 cards and must discard/fertig first
     scores:[...scores],round,eliminated:[...elim],
     playerNames:names||['Du','Dani','Holly'],
     roundWinner:null,grandSlam:false,
@@ -1165,38 +1159,27 @@ function aiGoOut(p, hand, dp, disc){
 function runAI(){
   if(!G||G.phase!=='playing')return;
   const p=G.currentPlayer;
-  // In solo: skip player ME (Mensch). In multi: nur auf Host, nur AI-Spieler
   if(MP.on){
     if(!MP.host)return;
     if(p===ME)return;
     const pl=MP.players[p];
-    if(!pl||pl.ai!==true)return;
+    if(!pl||pl.ai!==true){console.log('[runAI] skip p='+p,JSON.stringify(pl));return;}
   } else {
-    if(p===ME)return; // solo: ME=0 ist der Mensch
+    if(p===ME)return;
   }
+  const myName=G.playerNames[ME];
+  function nextMsg(nxt){return nxt===ME?(myName+', dein Zug — Karte ziehen!'):(G.playerNames[nxt]+' denkt...');}
   let dp=[...G.drawPile],disc=[...G.discardPile];
-
-  // Hilfsfunktion: Nachricht nach AI-Zug
-  function nextMsg(nxt){
-    return nxt===ME
-      ?`${G.playerNames[ME]}, dein Zug — Karte ziehen!`
-      :`${G.playerNames[nxt]} denkt...`;
-  }
-
-  // If AI is first player with 11 cards, skip draw
   if(G.hands[p].length===HS+1){
-    if(aiGoOut(p, G.hands[p], dp, disc))return;
+    if(aiGoOut(p,G.hands[p],dp,disc))return;
     const dis=aiBest(G.hands[p]);
     disc.push(dis);
     const fh=G.hands[p].filter(c=>c.id!==dis.id);
     const nxt=nextAct(p,G.eliminated);
     G={...G,hands:G.hands.map((h,i)=>i===p?fh:h),
-      drawPile:dp,discardPile:disc,currentPlayer:nxt,mustDiscard:false,
-      message:nextMsg(nxt)};
+      drawPile:dp,discardPile:disc,currentPlayer:nxt,mustDiscard:false,message:nextMsg(nxt)};
     render();scheduleAI();return;
   }
-
-  // Normal draw
   if(!dp.length){const top=disc.pop();dp=shuf(disc);disc=top?[top]:[];}
   const td=disc[disc.length-1];let drawn;
   if(td){
@@ -1205,27 +1188,23 @@ function runAI(){
     drawn=pd<pn?disc.pop():dp.pop();
   }else drawn=dp.pop();
   const nh=[...G.hands[p],drawn];
-
-  if(aiGoOut(p, nh, dp, disc))return;
+  if(aiGoOut(p,nh,dp,disc))return;
   const dis=aiBest(nh);const fh=nh.filter(c=>c.id!==dis.id);disc.push(dis);
   const nxt=nextAct(p,G.eliminated);
   G={...G,hands:G.hands.map((h,i)=>i===p?fh:h),
-    drawPile:dp,discardPile:disc,currentPlayer:nxt,mustDiscard:false,
-    message:nextMsg(nxt)};
+    drawPile:dp,discardPile:disc,currentPlayer:nxt,mustDiscard:false,message:nextMsg(nxt)};
   render();scheduleAI();
 }
 
 function scheduleAI(){
   clearTimeout(aiTimer);
   if(!G||G.phase!=='playing')return;
-  // In solo: skip wenn Spieler 0 (Mensch) dran ist
-  // In MP: AI-timer nur auf Host; skip wenn current player kein AI ist
   if(MP.on){
-    if(!MP.host)return; // Nicht-Host feuert keinen AI-Timer
+    if(!MP.host)return;
     const pl=MP.players[Number(G.currentPlayer)];
-    if(!pl||pl.ai!==true)return; // Kein AI-Timer für menschliche Spieler
+    if(!pl||pl.ai!==true)return;
   } else {
-    if(G.currentPlayer===0)return; // Solo: Spieler 0 = Mensch
+    if(G.currentPlayer===ME)return;
   }
   aiTimer=setTimeout(runAI,950);
 }
@@ -1242,6 +1221,7 @@ function doDraw(){
   playDraw();G={...G,hands:G.hands.map((h,i)=>i===ME?nh:h),drawPile:dp,discardPile:disc,
     mustDiscard:true,message:'Gezogen — Karte ablegen oder FERTIG! drücken.'};
   render();
+  if(MP.on)MP.push();
 }
 
 function doDrawDiscard(){
@@ -1254,6 +1234,7 @@ function doDrawDiscard(){
   playDraw();G={...G,hands:G.hands.map((h,i)=>i===ME?nh:h),discardPile:disc,
     mustDiscard:true,message:`${card.j?'Joker':card.r+card.s} vom Ablagestapel — leg ab oder FERTIG!`};
   render();
+  if(MP.on)MP.push();
 }
 
 function doDiscard(cardId){
@@ -1267,8 +1248,9 @@ function doDiscard(cardId){
   const myName=G.playerNames[ME];
   playDiscard();G={...G,hands:G.hands.map((x,i)=>i===ME?nh:x),
     discardPile:disc,currentPlayer:nxt,mustDiscard:false,
-    message:nxt===ME?`${myName}, dein Zug — Karte ziehen!`:`${G.playerNames[nxt]} denkt...`};
+    message:nxt===ME?(myName+', dein Zug — Karte ziehen!'):(G.playerNames[nxt]+' denkt...')};
   render();scheduleAI();
+  if(MP.on)MP.push();
 }
 
 function tryGoOut(){
@@ -1284,6 +1266,7 @@ function tryGoOut(){
   if(!validDiscards.length){
     G.message='Karten passen noch nicht — du kannst nicht raus!';render();return;
   }
+  // If only one valid discard → go straight to goOutDiscard
   if(validDiscards.length===1){
     const dc=validDiscards[0];
     const rem=h.filter(x=>x.id!==dc.id);
@@ -1292,6 +1275,7 @@ function tryGoOut(){
       message:`Tippe auf ${dc.j?'Joker':dc.r+dc.s} zum Ablegen — dann bist du fertig! ✦`};
     render();return;
   }
+  // Multiple valid discards → go directly, highlight all valid cards
   const bestDc=validDiscards[0];
   pendingArr=bestArr(h.filter(x=>x.id!==bestDc.id));
   G={...G,phase:'goOutDiscard',validDiscardIds:validDiscards.map(c=>c.id),mustDiscard:true,
@@ -1321,8 +1305,9 @@ function doGoOutFinal(cardId){
   for(let i=0;i<NP;i++){if(!G.eliminated.includes(i)&&i!==ME)ns[i]+=pen(G.hands[i]);}
   playRoundWin();G={...G,hands:G.hands.map((x,i)=>i===ME?rem:x),
     discardPile:disc,scores:ns,phase:'roundEnd',roundWinner:ME,
-    mustDiscard:false,message:`🎉 ${G.playerNames[ME]} ist fertig!`};
+    mustDiscard:false,message:'🎉 '+G.playerNames[ME]+' ist fertig!'};
   render();showRoundEnd();
+  if(MP.on)MP.push();
 }
 
 
@@ -1356,7 +1341,7 @@ function showFertigModal(arr){
 function showRoundEnd(){
   launchConfetti(false);
   const title=document.getElementById('round-title');
-  title.textContent=G.roundWinner===ME?`🎉 ${G.playerNames[ME]} ist fertig!`:`${G.playerNames[G.roundWinner]} ist fertig!`;
+  title.textContent=G.roundWinner===ME?'🎉 '+G.playerNames[ME]+' ist fertig!':G.playerNames[G.roundWinner]+' ist fertig!';
   const res=document.getElementById('round-results');
   res.innerHTML='';
   G.playerNames.forEach((name,i)=>{
@@ -1464,8 +1449,8 @@ function endRound(){
   handOrder=null;
   const fp=G.currentPlayer;
   G.message=G.mustDiscard
-    ?`${G.playerNames[fp]} hat 11 Karten — ${fp===ME?'leg ab oder drück FERTIG!':'wartet auf Zug'}`
-    :(fp===ME?`${G.playerNames[ME]}, dein Zug — Karte ziehen!`:`${G.playerNames[fp]} denkt...`);
+    ?(G.playerNames[fp]+' hat 11 Karten'+(fp===ME?' — leg ab oder drück FERTIG!':''))
+    :(fp===ME?(G.playerNames[ME]+', dein Zug — Karte ziehen!'):(G.playerNames[fp]+' denkt...'));
   render();scheduleAI();
 }
 
@@ -1493,8 +1478,8 @@ function doBuyIn(pi,yes){
   handOrder=null;
   const fp2=G.currentPlayer;
   G.message=G.mustDiscard
-    ?`${G.playerNames[fp2]} hat 11 Karten — ${fp2===ME?'leg ab oder drück FERTIG!':'wartet auf Zug'}`
-    :(fp2===ME?`${G.playerNames[ME]}, dein Zug — Karte ziehen!`:`${G.playerNames[fp2]} denkt...`);
+    ?(G.playerNames[fp2]+' hat 11 Karten'+(fp2===ME?' — leg ab oder drück FERTIG!':''))
+    :(fp2===ME?(G.playerNames[ME]+', dein Zug — Karte ziehen!'):(G.playerNames[fp2]+' denkt...'));
   const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
   render();scheduleAI();
 }
@@ -1604,7 +1589,7 @@ function render(){
   // Always show MP debug
   const dbgEl=document.getElementById('mp-debug');
   if(dbgEl){
-    dbgEl.textContent=`MP.on=${MP.on} ME=${ME} myIdx=${MP.myIdx} host=${MP.host} cur=${G.currentPlayer} myTurn=${myTurn} hand=${G.hands[ME]?.length}`;
+    dbgEl.textContent=`ME=${ME} on=${MP.on} idx=${MP.myIdx} host=${MP.host} cur=${G.currentPlayer} myTurn=${myTurn} hand=${G.hands[ME]?.length} players=${JSON.stringify(MP.players.map(p=>p?.name+(p?.ai?'(AI)':'')))}`;
     dbgEl.style.display='block';
   }
 
@@ -1637,21 +1622,19 @@ function render(){
     scoresEl.appendChild(div);
   }
 
-  // Opponents — alle Spieler außer mir (ME) anzeigen
+  // Opponents
   const oppsEl=document.getElementById('opps');
   oppsEl.innerHTML='';
-  const oppIndices=[];
-  for(let i=0;i<NP;i++){if(i!==ME)oppIndices.push(i);}
-  // Maximal 3 Gegner anzeigen (Layout-Limit), Rest weglassen
-  for(const p of oppIndices.slice(0,3)){
+  const oppList=[];for(let i=0;i<NP;i++){if(i!==ME)oppList.push(i);}
+  for(const p of oppList.slice(0,3)){
     const div=document.createElement('div');div.className='opp';
     const elim=G.eliminated.includes(p);
     div.innerHTML=`
       <div class="opp-hdr">
-        <span class="opp-name">${G.playerNames[p]||'?'}</span>
+        <span class="opp-name">${G.playerNames[p]}</span>
         <span class="badge${elim?' red':''}">${elim?'ausgeschieden':`${G.hands[p]?.length||0} Karten`}</span>
       </div>
-      <div class="opp-cards">${(G.hands[p]||[]).map((_,j)=>`<div class="bcard" style="animation-delay:${j*30}ms"><div class="bcard-inner"></div></div>`).join('')}</div>`;
+      <div class="opp-cards">${(G.hands[p]||[]).map((_,i)=>`<div class="bcard" style="animation-delay:${i*30}ms"><div class="bcard-inner"></div></div>`).join('')}</div>`;
     oppsEl.appendChild(div);
   }
 
@@ -1749,7 +1732,7 @@ function render(){
 }
 
 function startGame(name){
-  ME=0; // Solo: immer Spieler 0
+  ME=0; // Solo: Spieler 0
   const n=(name||'Ingo').trim()||'Ingo';
   const pool=ALL_AI.filter(x=>x.toLowerCase()!==n.toLowerCase());
   const ai=pool.sort(()=>Math.random()-.5).slice(0,2);
@@ -1780,49 +1763,34 @@ function newGame(){
   if(ce)ce._dealt=false;
 }
 
-// Alle Event-Listener werden im DOMContentLoaded Block registriert
+// (Event-Listener werden im DOMContentLoaded Block registriert)
 
 
 // ═══════════════════════════════════════════
-// MP PUSH HOOKS (add after each action)
+// MP PUSH HOOKS — runAI nach Host-KI-Zug pushen
+// Alle anderen Aktionen (doDraw, doDiscard etc.) pushen direkt am Ende der Funktion.
+// runAI ist der einzige verbleibende Hook, weil er intern scheduleAI aufruft
+// und wir den State nach KI-Zügen zentral pushen müssen.
 // ═══════════════════════════════════════════
-// ═══════════════════════════════════════════
-// MP PUSH HOOKS — nach jeder Aktion zu Firebase pushen
-// Host: pusht direkt den neuen G-State
-// Nicht-Host: pusht auch (liest eigenen Zug rein), Host sieht den State via Listener
-// Wichtig: Nicht-Host darf NUR seinen eigenen Zug ausführen (wird durch ME-Checks in den
-//          Aktionsfunktionen sichergestellt)
-// ═══════════════════════════════════════════
-const _origDoDiscard=doDiscard;
-doDiscard=function(cardId){
-  _origDoDiscard(cardId);
-  if(MP.on){
-    if(MP.host){
-      console.log('[MP] After discard: cur='+G.currentPlayer+' NP='+NP);
-      MP.push();MP.schedAI();
-    } else {
-      MP.push(); // Nicht-Host pusht seinen neuen State
-    }
-  }
-};
-const _origDoDraw=doDraw;
-doDraw=function(){_origDoDraw();if(MP.on)MP.push();};
-const _origDoDrawDiscard=doDrawDiscard;
-doDrawDiscard=function(){_origDoDrawDiscard();if(MP.on)MP.push();};
-const _origEndRound=endRound;
-endRound=function(){_origEndRound();if(MP.on&&MP.host){MP.push();MP.schedAI();}};
-const _origDoBuyIn=doBuyIn;
-doBuyIn=function(pi,yes){_origDoBuyIn(pi,yes);if(MP.on&&MP.host){MP.push();MP.schedAI();}};
-const _origTryGoOut=tryGoOut;
-tryGoOut=function(){_origTryGoOut();if(MP.on)MP.push();};
-const _origConfirmGoOut=confirmGoOut;
-confirmGoOut=function(){_origConfirmGoOut();if(MP.on)MP.push();};
-
-// runAI: nur auf Host ausführen
 const _origRunAI=runAI;
 runAI=function(){
-  if(MP.on&&!MP.host)return;
+  if(MP.on&&!MP.host)return; // Nur Host führt KI aus
   _origRunAI();
+  if(MP.on&&MP.host&&G&&G.phase==='playing'){
+    MP.push();
+    // schedAI wird bereits von runAI intern via scheduleAI() aufgerufen
+  }
+};
+
+// endRound und doBuyIn: Host managed Rundenübergang und pusht
+const _origEndRound=endRound;
+endRound=function(){
+  _origEndRound();
+  if(MP.on&&MP.host){MP.push();MP.schedAI();}
+};
+const _origDoBuyIn=doBuyIn;
+doBuyIn=function(pi,yes){
+  _origDoBuyIn(pi,yes);
   if(MP.on&&MP.host){MP.push();MP.schedAI();}
 };
 
@@ -1849,8 +1817,7 @@ function genCode(){return Math.random().toString(36).substr(2,6).toUpperCase();}
 async function mpCreate(){
   const db=getDB();if(!db)return;
   const name=(document.getElementById('lb-host-name').value.trim()||'Ingo').substr(0,16);
-  MP.myName=name;MP.host=true;MP.myIdx=0;MP.NP=lbCount;NP=lbCount;
-  ME=0; // Host ist immer Spieler 0
+  MP.myName=name;MP.host=true;MP.myIdx=0;MP.NP=lbCount;NP=lbCount;ME=0;
   MP.roomCode=genCode();
   MP.roomRef=db.ref('rooms/'+MP.roomCode);
   const used=[name.toLowerCase()];
@@ -1880,8 +1847,7 @@ async function mpJoin(){
   for(let i=0;i<np;i++)players[i]=rp[i]||{name:'',ai:false,empty:true};
   const slot=players.findIndex((p,i)=>i>0&&(!p||p.empty||!p.name));
   if(slot<0){alert('Raum ist voll!');return;}
-  MP.myName=name;MP.host=false;MP.myIdx=slot;MP.NP=np;NP=np;
-  ME=slot; // Mein Index im players-Array
+  MP.myName=name;MP.host=false;MP.myIdx=slot;MP.NP=np;NP=np;ME=slot;
   MP.roomCode=code;
   players[slot]={name,ai:false};
   MP.players=players;
@@ -1940,15 +1906,16 @@ async function mpHostStart(){
       }
     }
     MP.players=players;
+    // NP = total filled players (all slots should be filled now)
     const actualNP=players.length;
-    NP=actualNP;MP.NP=actualNP;ME=0; // Host ist Spieler 0
+    NP=actualNP;MP.NP=actualNP;ME=0;
     const names=players.map(p=>p.name);
     const contrib=Array(actualNP).fill(2);
     G=deal(Array(actualNP).fill(0),1,[],names,contrib,actualNP*2);
     const fp=G.currentPlayer;
     G.message=G.mustDiscard
-      ?`${names[fp]} hat 11 Karten — ${fp===0?'leg ab oder drück FERTIG!':'wartet...'}`
-      :(fp===0?`${names[0]}, dein Zug — Karte ziehen!`:`${names[fp]} denkt...`);
+      ?(names[fp]+' hat 11 Karten'+(fp===0?' — leg ab oder drück FERTIG!':''))
+      :(fp===0?(names[0]+', dein Zug — Karte ziehen!'):(names[fp]+' denkt...'));
     G.ts=Date.now();MP.on=true;
     await MP.roomRef.update({status:'playing',players,gameState:G});
     document.getElementById('screen-waiting').classList.remove('active');
@@ -1993,8 +1960,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   on('btn-cancel-fertig',()=>closeModal('modal-fertig'));
   on('btn-next-round',endRound);
   on('btn-new-game',()=>{closeModal('modal-gameover');document.getElementById('screen-game').style.display='none';document.getElementById('screen-name').style.display='none';document.getElementById('screen-lobby').classList.add('active');MP.stop();});
-  on('btn-ssort',()=>{if(!G)return;const h=G.hands[ME];G={...G,hands:G.hands.map((x,i)=>i===ME?ssort(h):x)};handOrder=ssort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
-  on('btn-vsort',()=>{if(!G)return;const h=G.hands[ME];G={...G,hands:G.hands.map((x,i)=>i===ME?vsort(h):x)};handOrder=vsort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
+  on('btn-ssort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?ssort(x):x)};handOrder=ssort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
+  on('btn-vsort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?vsort(x):x)};handOrder=vsort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
   document.getElementById('name-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')startGame(document.getElementById('name-input').value);});
   document.getElementById('lb-join-code')?.addEventListener('input',e=>e.target.value=e.target.value.toUpperCase());
   document.getElementById('lb-host-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')mpCreate();});
