@@ -677,7 +677,6 @@ header{
     <div class="go-hint" id="go-hint">Karte antippen zum Ablegen → Runde gewonnen!</div>
   </div>
 
-  <div id="mp-debug" style="background:rgba(255,0,0,.5);padding:5px 10px;font-size:11px;color:#fff;display:none;margin:4px 14px;border-radius:6px;font-family:monospace;word-break:break-all"></div>
   <div class="hand-wrap">
     <div class="hand-hdr">
       <div>
@@ -1586,13 +1585,6 @@ function renderHandOnly(){
 function render(){
   if(!G)return;
   const myTurn=Number(G.currentPlayer)===ME;
-  // Always show MP debug
-  const dbgEl=document.getElementById('mp-debug');
-  if(dbgEl){
-    dbgEl.textContent=`ME=${ME} on=${MP.on} idx=${MP.myIdx} host=${MP.host} cur=${G.currentPlayer} myTurn=${myTurn} hand=${G.hands[ME]?.length} players=${JSON.stringify(MP.players.map(p=>p?.name+(p?.ai?'(AI)':'')))}`;
-    dbgEl.style.display='block';
-  }
-
   const canDraw=myTurn&&!G.mustDiscard&&G.phase==='playing'&&(G.hands[ME]||[]).length<HS+1;
   const goOut=G.phase==='goOutDiscard';
 
