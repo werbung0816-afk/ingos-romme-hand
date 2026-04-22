@@ -772,7 +772,6 @@ const MP={
     if(!this.on||!this.host||!G||G.phase!=='playing')return;
     const p=Number(G.currentPlayer);
     const pl=this.players[p];
-    console.log('[schedAI] cur='+p+' player='+JSON.stringify(pl));
     if(pl&&pl.ai===true){
       clearTimeout(aiTimer);aiTimer=setTimeout(runAI,800);
     }
@@ -803,7 +802,6 @@ const MP={
             // rp[i] kann undefined sein wenn Firebase Array→Object konvertiert hat
             MP.players[i]=rp[i]||{name:'',ai:false};
           }
-          console.log('[listen] players='+JSON.stringify(MP.players));
           // Für Nicht-Host: myIdx und ME aktualisieren
           if(!MP.host){
             for(let i=0;i<np;i++){
@@ -836,7 +834,6 @@ const MP={
             }
           }
           if(MP.host&&G.phase==='playing'){
-            console.log('[listen] calling schedAI for cur='+G.currentPlayer);
             this.schedAI();
           }
         }
@@ -1162,7 +1159,7 @@ function runAI(){
     if(!MP.host)return;
     if(p===ME)return;
     const pl=MP.players[p];
-    if(!pl||pl.ai!==true){console.log('[runAI] skip p='+p,JSON.stringify(pl));return;}
+    if(!pl||pl.ai!==true)return;
   } else {
     if(p===ME)return;
   }
