@@ -1976,6 +1976,12 @@ async function mpHostStart(){
         players[i]={...players[i],ai:false};
       }
     }
+    // Ingo garantieren: wenn kein Spieler Ingo heißt, ersten KI-Spieler umbenennen
+    const hasIngo=players.some(p=>p&&p.name&&p.name.toLowerCase()==='ingo');
+    if(!hasIngo){
+      const firstAI=players.find(p=>p&&p.ai===true);
+      if(firstAI)firstAI.name='Ingo';
+    }
     MP.players=players;
     // NP = total filled players (all slots should be filled now)
     const actualNP=players.length;
