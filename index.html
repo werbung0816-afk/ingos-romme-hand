@@ -830,6 +830,7 @@ const MP={
             else if(G.phase==='gameOver')showGameOver();
             else if(G.phase==='playing'){
               closeModal('modal-round');closeModal('modal-buyin');
+              handOrder=null;
               const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
             }
           }
@@ -1369,6 +1370,38 @@ function showBuyIn(){
   const active=[...Array(NP).keys()].filter(i=>!G.eliminated.includes(i)&&G.playerNames[i]);
   const notBuying=active.filter(i=>!G.buyInPending.includes(i));
   const worst=notBuying.length?Math.max(...notBuying.map(i=>G.scores[i])):0;
+
+  // MP: Jeder sieht nur seine eigene Einkauf-Entscheidung
+  if(MP.on){
+    if(G.buyInPending.includes(ME)){
+      const p=ME;
+      const div=document.createElement('div');div.className='buy-card';
+      div.innerHTML=`
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-family:'Cinzel',serif;font-size:14px;color:var(--gold)">${G.playerNames[p]}</span>
+          <span style="font-size:11px;padding:2px 10px;border-radius:6px;background:rgba(231,76,60,.1);color:#e74c3c;border:1px solid rgba(231,76,60,.25)">${G.scores[p]} Pkt</span>
+        </div>
+        <div style="font-size:13px;color:rgba(232,224,208,.5);margin-bottom:12px;line-height:1.7">
+          Für <b style="color:var(--gold)">1 €</b> einkaufen → Punktestand auf <b style="color:var(--gold)">${worst}</b> zurücksetzen
+        </div>
+        <div class="buy-btns">
+          <button class="btn-buy yes" onclick="doBuyIn(${p},true)">Einkaufen (1 €)</button>
+          <button class="btn-buy no" onclick="doBuyIn(${p},false)">Ausscheiden</button>
+        </div>`;
+      content.appendChild(div);
+    } else {
+      // Andere Spieler: Warte-Anzeige
+      const waiting=G.buyInPending.map(p=>G.playerNames[p]).join(', ');
+      content.innerHTML=`<div style="text-align:center;padding:24px 0;color:rgba(232,224,208,.5);font-style:italic;line-height:2">
+        Warte auf Entscheidung von<br>
+        <span style="color:var(--gold);font-weight:600;font-style:normal">${waiting}</span>
+      </div>`;
+    }
+    openModal('modal-buyin');
+    return;
+  }
+
+  // Solo: alle pending Spieler anzeigen
   G.buyInPending.filter(p=>G.playerNames[p]).forEach(p=>{
     const div=document.createElement('div');div.className='buy-card';
     div.innerHTML=`
@@ -1451,6 +1484,13 @@ function endRound(){
 }
 
 function doBuyIn(pi,yes){
+  // MP: Nur eigene Entscheidung erlaubt (oder KI-Spieler durch Host)
+  if(MP.on){
+    const isMyDecision = pi===ME;
+    const isAIDecision = MP.host && MP.players[pi]&&MP.players[pi].ai===true;
+    if(!isMyDecision&&!isAIDecision)return;
+  }
+
   const bip=G.buyInPending.filter(p=>p!==pi);
   const ns=[...G.scores];
   const ne=[...G.eliminated];
@@ -1465,6 +1505,39 @@ function doBuyIn(pi,yes){
     ne.push(pi);
   }
   G={...G,scores:ns,eliminated:ne,buyInPending:bip,contributions:nc,totalPot:newTotal};
+
+  // MP: nach jeder Entscheidung pushen
+  if(MP.on){
+    if(bip.length>0){
+      // Noch weitere Spieler ausstehend
+      MP.push();
+      showBuyIn(); // zeigt Warte-Screen oder nächste eigene Entscheidung
+      return;
+    }
+    // Alle haben entschieden
+    closeModal('modal-buyin');
+    if(!MP.host){
+      // Nicht-Host: pusht letzte Entscheidung, Host startet nächste Runde
+      MP.push();
+      return;
+    }
+    // Host: nächste Runde starten
+    const active=[...Array(NP).keys()].filter(i=>!ne.includes(i));
+    const underMax=active.filter(i=>ns[i]<MAX);
+    if(active.length<=1||underMax.length<=1){G={...G,phase:'gameOver'};showGameOver();MP.push();return;}
+    G=deal(ns,G.round+1,ne,G.playerNames,nc,newTotal);
+    handOrder=null;
+    const fp2=G.currentPlayer;
+    G.message=G.mustDiscard
+      ?(G.playerNames[fp2]+' hat 11 Karten'+(fp2===ME?' — leg ab oder drück FERTIG!':''))
+      :(fp2===ME?(G.playerNames[ME]+', dein Zug — Karte ziehen!'):(G.playerNames[fp2]+' denkt...'));
+    const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
+    render();scheduleAI();
+    MP.push();MP.schedAI();
+    return;
+  }
+
+  // Solo
   if(bip.length>0){showBuyIn();return;}
   closeModal('modal-buyin');
   const active=[...Array(NP).keys()].filter(i=>!ne.includes(i));
@@ -1777,11 +1850,7 @@ endRound=function(){
   _origEndRound();
   if(MP.on&&MP.host){MP.push();MP.schedAI();}
 };
-const _origDoBuyIn=doBuyIn;
-doBuyIn=function(pi,yes){
-  _origDoBuyIn(pi,yes);
-  if(MP.on&&MP.host){MP.push();MP.schedAI();}
-};
+// doBuyIn handles MP push internally
 
 // ═══════════════════════════════════════════
 // LOBBY UI
