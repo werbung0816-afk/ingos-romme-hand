@@ -527,7 +527,7 @@ header{
 .wt-sub{font-size:13px;color:var(--text2);margin-bottom:20px;}
 .wt-codebox{background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.2);border-radius:12px;padding:14px;margin-bottom:16px;}
 .wt-codelbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:rgba(212,175,55,.5);margin-bottom:6px;}
-.wt-code{font-family:'Cinzel',serif;font-size:30px;font-weight:700;color:var(--gold);letter-spacing:10px;}
+.wt-code{font-family:'Cinzel',serif;font-size:36px;font-weight:700;color:var(--gold);letter-spacing:14px;}
 .wt-url{font-size:11px;color:var(--text2);margin-top:6px;word-break:break-all;}
 .wt-slots{display:flex;flex-direction:column;gap:7px;margin-bottom:18px;}
 .wt-slot{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);text-align:left;}
@@ -959,16 +959,8 @@ const RV={A:11,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:10,Q:10,K:10};
 const SO={'♠':0,'♥':1,'♦':2,'♣':3,'★':4};
 const JOKER_V=20;
 let NP=3;const HS=10,MAX=100;
-const ALL_AI=['Dani','Holly','Julia','Joschi'];
+const ALL_AI=['Ingo','Dani','Holly','Julia','Joschi'];
 
-// Stellt sicher dass Ingo immer als KI dabei ist, wenn kein Mensch so heißt
-function ensureIngo(aiNames, humanNames){
-  const allNames=humanNames.map(n=>n.toLowerCase());
-  if(allNames.includes('ingo'))return aiNames; // Mensch heißt Ingo → kein KI-Ingo nötig
-  if(aiNames.map(n=>n.toLowerCase()).includes('ingo'))return aiNames; // schon drin
-  // Ingo an erste Stelle setzen, letzten rauswerfen
-  return ['Ingo',...aiNames.slice(0,aiNames.length-1)];
-}
 
 
 // ── GAME LOGIC ─────────────────────────────────────────────
@@ -1807,8 +1799,7 @@ function startGame(name){
   ME=0; // Solo: Spieler 0
   const n=(name||'Ingo').trim()||'Ingo';
   const pool=ALL_AI.filter(x=>x.toLowerCase()!==n.toLowerCase());
-  const aiRaw=pool.sort(()=>Math.random()-.5).slice(0,2);
-  const ai=ensureIngo(aiRaw,[n]);
+  const ai=pool.sort(()=>Math.random()-.5).slice(0,2);
   const initContrib=Array(NP).fill(2);
   G=deal([0,0,0],1,[],[n,...ai],initContrib,NP*2);
   handOrder=null;
@@ -1867,7 +1858,7 @@ endRound=function(){
 // LOBBY UI
 // ═══════════════════════════════════════════
 let lbCount=3,lbFill='human';
-const AI_POOL=['Dani','Holly','Julia','Joschi','Harry'];
+const AI_POOL=['Ingo','Dani','Holly','Julia','Joschi','Harry'];
 
 function lbSetCount(n){
   lbCount=n;
@@ -1881,7 +1872,7 @@ function lbSetFill(m){
   document.getElementById('btn-fill-human')?.classList.toggle('on',m==='human');
   document.getElementById('btn-fill-ai')?.classList.toggle('on',m==='ai');
 }
-function genCode(){return Math.random().toString(36).substr(2,6).toUpperCase();}
+function genCode(){return String(Math.floor(1000+Math.random()*9000));}
 
 async function mpCreate(){
   const db=getDB();if(!db)return;
@@ -1890,7 +1881,7 @@ async function mpCreate(){
   MP.roomCode=genCode();
   MP.roomRef=db.ref('rooms/'+MP.roomCode);
   const used=[name.toLowerCase()];
-  const pool=['Ingo',...AI_POOL.filter(n=>!used.includes(n.toLowerCase())&&n.toLowerCase()!=='ingo')];
+  const pool=AI_POOL.filter(n=>!used.includes(n.toLowerCase()));
   const players=[{name,ai:false}];
   for(let i=1;i<lbCount;i++){
     players[i]=lbFill==='ai'?{name:pool[(i-1)%pool.length],ai:true}:{name:'',ai:false,empty:true};
@@ -1902,7 +1893,7 @@ async function mpCreate(){
 
 async function mpJoin(){
   const db=getDB();if(!db)return;
-  const code=document.getElementById('lb-join-code').value.trim().toUpperCase();
+  const code=document.getElementById('lb-join-code').value.trim();
   const name=(document.getElementById('lb-join-name').value.trim()||'Gast').substr(0,16);
   if(!code){alert('Code eingeben!');return;}
   MP.roomRef=db.ref('rooms/'+code);
@@ -1962,12 +1953,8 @@ async function mpHostStart(){
     const players=[];
     for(let i=0;i<np;i++)players[i]=rp[i]||{name:'',ai:false,empty:true};
     // Fill truly empty slots with AI, keep real players as human
-    // Ingo immer als KI dabei wenn kein Mensch so heißt
     const used=players.filter(p=>p&&p.name&&!p.empty).map(p=>p.name.toLowerCase());
-    const ingoTaken=used.includes('ingo');
-    const pool=ingoTaken
-      ?AI_POOL.filter(n=>!used.includes(n.toLowerCase()))
-      :['Ingo',...AI_POOL.filter(n=>!used.includes(n.toLowerCase())&&n.toLowerCase()!=='ingo')];
+    const pool=AI_POOL.filter(n=>!used.includes(n.toLowerCase()));
     let pi=0;
     for(let i=0;i<np;i++){
       if(!players[i]||players[i].empty||!players[i].name){
@@ -2040,7 +2027,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   on('btn-ssort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?ssort(x):x)};handOrder=ssort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
   on('btn-vsort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?vsort(x):x)};handOrder=vsort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
   document.getElementById('name-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')startGame(document.getElementById('name-input').value);});
-  document.getElementById('lb-join-code')?.addEventListener('input',e=>e.target.value=e.target.value.toUpperCase());
+  document.getElementById('lb-join-code')?.addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,'').slice(0,4));
   document.getElementById('lb-host-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')mpCreate();});
   // Auto-join from URL
   const code=new URLSearchParams(location.search).get('join');
