@@ -829,6 +829,9 @@ const MP={
             else if(G.phase==='buyIn')showBuyIn();
             else if(G.phase==='gameOver')showGameOver();
             else if(G.phase==='playing'){
+              // Button wieder aktivieren (war evtl. durch Warte-Screen deaktiviert)
+              const nrBtn=document.getElementById('btn-next-round');
+              if(nrBtn){nrBtn.disabled=false;nrBtn.textContent='Nächste Runde →';}
               closeModal('modal-round');closeModal('modal-buyin');
               handOrder=null;
               const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
@@ -1338,6 +1341,11 @@ function showFertigModal(arr){
 }
 
 function showRoundEnd(){
+  // Button-Text je nach Rolle
+  const btn=document.getElementById('btn-next-round');
+  if(btn){
+    btn.textContent=MP.on&&!MP.host?'Verstanden →':'Nächste Runde →';
+  }
   launchConfetti(false);
   const title=document.getElementById('round-title');
   title.textContent=G.roundWinner===ME?'🎉 '+G.playerNames[ME]+' ist fertig!':G.playerNames[G.roundWinner]+' ist fertig!';
@@ -2022,7 +2030,19 @@ window.addEventListener('DOMContentLoaded',()=>{
   on('btn-fertig',tryGoOut);
   on('btn-confirm-fertig',confirmGoOut);
   on('btn-cancel-fertig',()=>closeModal('modal-fertig'));
-  on('btn-next-round',endRound);
+  on('btn-next-round',()=>{
+    if(MP.on&&!MP.host){
+      // Gast: Modal NICHT schließen — Warte-Meldung zeigen bis Host startet
+      const btn=document.getElementById('btn-next-round');
+      if(btn){btn.disabled=true;btn.textContent='Warte auf Host...';}
+      const title=document.getElementById('round-title');
+      if(title)title.textContent='⏳ Nächste Runde startet gleich…';
+      const res=document.getElementById('round-results');
+      if(res)res.innerHTML='<div style="text-align:center;padding:16px 0;color:rgba(232,224,208,.4);font-style:italic;">Warte auf Host…</div>';
+    } else {
+      endRound();
+    }
+  });
   on('btn-new-game',()=>{closeModal('modal-gameover');document.getElementById('screen-game').style.display='none';document.getElementById('screen-name').style.display='none';document.getElementById('screen-lobby').classList.add('active');MP.stop();});
   on('btn-ssort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?ssort(x):x)};handOrder=ssort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
   on('btn-vsort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?vsort(x):x)};handOrder=vsort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
