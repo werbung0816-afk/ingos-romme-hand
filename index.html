@@ -961,6 +961,16 @@ const JOKER_V=20;
 let NP=3;const HS=10,MAX=100;
 const ALL_AI=['Dani','Holly','Julia','Joschi'];
 
+// Stellt sicher dass Ingo immer als KI dabei ist, wenn kein Mensch so heißt
+function ensureIngo(aiNames, humanNames){
+  const allNames=humanNames.map(n=>n.toLowerCase());
+  if(allNames.includes('ingo'))return aiNames; // Mensch heißt Ingo → kein KI-Ingo nötig
+  if(aiNames.map(n=>n.toLowerCase()).includes('ingo'))return aiNames; // schon drin
+  // Ingo an erste Stelle setzen, letzten rauswerfen
+  return ['Ingo',...aiNames.slice(0,aiNames.length-1)];
+}
+
+
 // ── GAME LOGIC ─────────────────────────────────────────────
 function mkDeck(){
   let id=0,d=[];
@@ -1797,7 +1807,8 @@ function startGame(name){
   ME=0; // Solo: Spieler 0
   const n=(name||'Ingo').trim()||'Ingo';
   const pool=ALL_AI.filter(x=>x.toLowerCase()!==n.toLowerCase());
-  const ai=pool.sort(()=>Math.random()-.5).slice(0,2);
+  const aiRaw=pool.sort(()=>Math.random()-.5).slice(0,2);
+  const ai=ensureIngo(aiRaw,[n]);
   const initContrib=Array(NP).fill(2);
   G=deal([0,0,0],1,[],[n,...ai],initContrib,NP*2);
   handOrder=null;
@@ -1879,7 +1890,7 @@ async function mpCreate(){
   MP.roomCode=genCode();
   MP.roomRef=db.ref('rooms/'+MP.roomCode);
   const used=[name.toLowerCase()];
-  const pool=AI_POOL.filter(n=>!used.includes(n.toLowerCase()));
+  const pool=['Ingo',...AI_POOL.filter(n=>!used.includes(n.toLowerCase())&&n.toLowerCase()!=='ingo')];
   const players=[{name,ai:false}];
   for(let i=1;i<lbCount;i++){
     players[i]=lbFill==='ai'?{name:pool[(i-1)%pool.length],ai:true}:{name:'',ai:false,empty:true};
@@ -1951,15 +1962,17 @@ async function mpHostStart(){
     const players=[];
     for(let i=0;i<np;i++)players[i]=rp[i]||{name:'',ai:false,empty:true};
     // Fill truly empty slots with AI, keep real players as human
+    // Ingo immer als KI dabei wenn kein Mensch so heißt
     const used=players.filter(p=>p&&p.name&&!p.empty).map(p=>p.name.toLowerCase());
-    const pool=AI_POOL.filter(n=>!used.includes(n.toLowerCase()));
+    const ingoTaken=used.includes('ingo');
+    const pool=ingoTaken
+      ?AI_POOL.filter(n=>!used.includes(n.toLowerCase()))
+      :['Ingo',...AI_POOL.filter(n=>!used.includes(n.toLowerCase())&&n.toLowerCase()!=='ingo')];
     let pi=0;
     for(let i=0;i<np;i++){
       if(!players[i]||players[i].empty||!players[i].name){
-        // Truly empty - fill with AI
         players[i]={name:pool[pi++%pool.length],ai:true};
       } else {
-        // Real player - ensure ai=false
         players[i]={...players[i],ai:false};
       }
     }
