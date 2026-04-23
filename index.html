@@ -2041,7 +2041,7 @@ async function mpHostStart(){
     document.getElementById('screen-game').style.display='block';
     handOrder=null;
     const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
-    render();MP.schedAI();
+    render();MP.schedAI();initGameChat();
   }catch(e){alert('Fehler: '+e.message);console.error(e);}
 }
 
