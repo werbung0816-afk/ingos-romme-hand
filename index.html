@@ -2100,6 +2100,105 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(code){document.getElementById('lb-join-code').value=code;document.getElementById('screen-lobby').classList.add('active');}
   else document.getElementById('screen-lobby').classList.add('active');
 });
+
+// ═══════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════
+let _chatRef=null,_chatListener=null,_chatOpen=false,_chatUnread=0;
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function chatMsgHtml(msg,myName){
+  const mine=msg.sender===myName;
+  const col=mine?'#2ecc71':'#d4af37';
+  // Format: message text — Name
+  return `<div class="wt-chat-msg"><span class="ct">${escH(msg.text)}</span><span class="cn" style="color:${col};margin-left:6px;">— ${escH(msg.sender)}</span></div>`;
+}
+
+function initWaitChat(){
+  if(!MP.roomRef)return;
+  _chatRef=MP.roomRef.child('chat');
+  const chatDiv=document.getElementById('wt-chat');
+  if(chatDiv)chatDiv.classList.add('show');
+  const msgs=document.getElementById('wt-chat-msgs');
+  if(msgs)msgs.innerHTML='';
+  // Emoji bar
+  const eb=document.getElementById('wt-emoji-bar');
+  if(eb){eb.innerHTML='';
+    ['😁', '🥲', '😰', '🥳', '🫣', '🤔', '🤓', '🤪', '💩', '👌', '🥱', '🍻', '🍺', '😂', '🎲', '🙏', '👀', '🪩', '🕺', '😎', '🎁', '🧐', '🙌'].forEach(em=>{const b=document.createElement('button');b.className='wt-emoji-btn';b.textContent=em;
+      b.onclick=()=>{const i=document.getElementById('wt-chat-input');if(i){i.value+=em;i.focus();}};eb.appendChild(b);});
+  }
+  // Listen
+  if(_chatListener)_chatRef.off('child_added',_chatListener);
+  _chatListener=_chatRef.on('child_added',snap=>{
+    const msg=snap.val();if(!msg)return;
+    const m=document.getElementById('wt-chat-msgs');
+    if(m){m.insertAdjacentHTML('beforeend',chatMsgHtml(msg,MP.myName));m.scrollTop=m.scrollHeight;}
+    const gm=document.getElementById('chat-msgs');
+    if(gm){gm.insertAdjacentHTML('beforeend',chatMsgHtml(msg,MP.myName));gm.scrollTop=gm.scrollHeight;}
+    if(!_chatOpen){_chatUnread++;const badge=document.getElementById('chat-badge');
+      if(badge){badge.textContent=_chatUnread>9?'9+':_chatUnread;badge.classList.add('has-new');}}
+  });
+  function sendWt(){
+    const inp=document.getElementById('wt-chat-input');
+    const t=inp?inp.value.trim():'';if(!t||!_chatRef)return;
+    _chatRef.push({sender:MP.myName||'?',text:t,ts:Date.now()});if(inp)inp.value='';
+  }
+  const sb=document.getElementById('wt-chat-send');
+  const inp=document.getElementById('wt-chat-input');
+  if(sb){const sb2=sb.cloneNode(true);sb.replaceWith(sb2);sb2.onclick=sendWt;}
+  if(inp){const i2=inp.cloneNode(true);inp.replaceWith(i2);i2.addEventListener('keydown',e=>{if(e.key==='Enter')sendWt();});}
+}
+
+function initGameChat(){
+  const cw=document.getElementById('chat-wrap');
+  if(cw)cw.classList.add('active');
+  // Emoji bar
+  const eb=document.getElementById('chat-emoji-bar');
+  if(eb){eb.innerHTML='';
+    ['😁', '🥲', '😰', '🥳', '🫣', '🤔', '🤓', '🤪', '💩', '👌', '🥱', '🍻', '🍺', '😂', '🎲', '🙏', '👀', '🪩', '🕺', '😎', '🎁', '🧐', '🙌'].forEach(em=>{const b=document.createElement('button');b.className='chat-emoji-btn';b.textContent=em;
+      b.onclick=()=>{const i=document.getElementById('chat-input');if(i){i.value+=em;i.focus();}};eb.appendChild(b);});
+  }
+  // Re-use existing listener or start new one
+  if(!_chatRef&&MP.roomRef)_chatRef=MP.roomRef.child('chat');
+  if(_chatRef&&!_chatListener){
+    _chatListener=_chatRef.on('child_added',snap=>{
+      const msg=snap.val();if(!msg)return;
+      const gm=document.getElementById('chat-msgs');
+      if(gm){gm.insertAdjacentHTML('beforeend',chatMsgHtml(msg,MP.myName));gm.scrollTop=gm.scrollHeight;}
+      if(!_chatOpen){_chatUnread++;const badge=document.getElementById('chat-badge');
+        if(badge){badge.textContent=_chatUnread>9?'9+':_chatUnread;badge.classList.add('has-new');}}
+    });
+  }
+  function sendGame(){
+    const inp=document.getElementById('chat-input');
+    const t=inp?inp.value.trim():'';if(!t||!_chatRef)return;
+    _chatRef.push({sender:MP.myName||'?',text:t,ts:Date.now()});if(inp)inp.value='';
+  }
+  const sb=document.getElementById('chat-send');const inp=document.getElementById('chat-input');
+  if(sb){const sb2=sb.cloneNode(true);sb.replaceWith(sb2);sb2.onclick=sendGame;}
+  if(inp){const i2=inp.cloneNode(true);inp.replaceWith(i2);i2.addEventListener('keydown',e=>{if(e.key==='Enter')sendGame();});}
+  const tog=document.getElementById('chat-toggle');
+  if(tog){const tog2=tog.cloneNode(true);tog.replaceWith(tog2);
+    tog2.onclick=()=>{_chatOpen=!_chatOpen;
+      const panel=document.getElementById('chat-panel');if(panel)panel.classList.toggle('open',_chatOpen);
+      if(_chatOpen){_chatUnread=0;const badge=document.getElementById('chat-badge');
+        if(badge){badge.textContent='';badge.classList.remove('has-new');}
+        const gm=document.getElementById('chat-msgs');if(gm)gm.scrollTop=gm.scrollHeight;}
+    };
+  }
+}
+
+function stopChat(){
+  if(_chatRef&&_chatListener){_chatRef.off('child_added',_chatListener);_chatListener=null;}
+  _chatRef=null;_chatOpen=false;_chatUnread=0;
+  const cw=document.getElementById('chat-wrap');if(cw)cw.classList.remove('active');
+  const cp=document.getElementById('chat-panel');if(cp)cp.classList.remove('open');
+  const gm=document.getElementById('chat-msgs');if(gm)gm.innerHTML='';
+  const wc=document.getElementById('wt-chat');if(wc)wc.classList.remove('show');
+  const wm=document.getElementById('wt-chat-msgs');if(wm)wm.innerHTML='';
+  const badge=document.getElementById('chat-badge');if(badge)badge.classList.remove('has-new');
+}
+
 </script>
 
 <div id="chat-wrap">
