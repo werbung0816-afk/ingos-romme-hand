@@ -501,6 +501,42 @@ header{
   .scores{padding:8px 10px;gap:5px;}
   .name-box{padding:32px 28px;}
 }
+
+/* ── CHAT ── */
+#wt-chat{margin-top:14px;border:1px solid rgba(212,175,55,.15);border-radius:12px;overflow:hidden;display:none;flex-direction:column;}
+#wt-chat.show{display:flex;}
+#wt-chat-title{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:rgba(212,175,55,.45);padding:8px 12px 6px;border-bottom:1px solid rgba(255,255,255,.05);}
+#wt-chat-msgs{height:120px;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:5px;scrollbar-width:thin;scrollbar-color:rgba(212,175,55,.2) transparent;}
+.wt-chat-msg{font-size:13px;line-height:1.4;}
+.wt-chat-msg .cn{font-weight:600;margin-right:4px;}
+.wt-chat-msg .ct{color:rgba(232,224,208,.6);}
+#wt-emoji-bar{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px 2px;border-top:1px solid rgba(255,255,255,.04);}
+.wt-emoji-btn{background:none;border:none;cursor:pointer;font-size:16px;padding:2px 3px;border-radius:5px;-webkit-tap-highlight-color:transparent;}
+.wt-emoji-btn:hover{background:rgba(255,255,255,.1);}
+#wt-chat-input-row{display:flex;gap:6px;padding:7px 10px;border-top:1px solid rgba(255,255,255,.05);}
+#wt-chat-input{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(212,175,55,.2);border-radius:8px;padding:7px 10px;color:#e8e0d0;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;}
+#wt-chat-input:focus{border-color:rgba(212,175,55,.4);}
+#wt-chat-send{background:linear-gradient(135deg,#9a7015,#d4af37);color:#1a0f00;border:none;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:13px;}
+/* In-game chat */
+#chat-wrap{position:fixed;bottom:20px;right:16px;z-index:300;display:none;flex-direction:column;width:min(320px,90vw);}
+#chat-wrap.active{display:flex;}
+#chat-toggle{align-self:flex-end;background:linear-gradient(135deg,#9a7015,#d4af37);color:#1a0f00;border:none;border-radius:20px;padding:8px 16px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;cursor:pointer;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.4);display:flex;align-items:center;gap:6px;}
+#chat-badge{background:#e74c3c;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;display:none;align-items:center;justify-content:center;font-weight:700;}
+#chat-badge.has-new{display:flex;}
+#chat-panel{background:linear-gradient(160deg,#0b1a0d,#070e08);border:1px solid rgba(212,175,55,.2);border-radius:14px;margin-bottom:8px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.7);display:none;flex-direction:column;max-height:340px;}
+#chat-panel.open{display:flex;}
+#chat-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:rgba(212,175,55,.6);padding:10px 14px 8px;border-bottom:1px solid rgba(255,255,255,.05);}
+#chat-msgs{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px;min-height:100px;scrollbar-width:thin;scrollbar-color:rgba(212,175,55,.2) transparent;}
+.chat-msg{font-size:13px;line-height:1.4;}
+.chat-msg .cn{font-weight:600;margin-right:4px;}
+.chat-msg .ct{color:rgba(232,224,208,.6);}
+#chat-emoji-bar{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px 2px;border-bottom:1px solid rgba(255,255,255,.04);}
+.chat-emoji-btn{background:none;border:none;cursor:pointer;font-size:16px;padding:2px 3px;border-radius:5px;-webkit-tap-highlight-color:transparent;}
+.chat-emoji-btn:hover{background:rgba(255,255,255,.1);}
+#chat-input-row{display:flex;gap:6px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.05);}
+#chat-input{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(212,175,55,.2);border-radius:8px;padding:7px 10px;color:#e8e0d0;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;}
+#chat-input:focus{border-color:rgba(212,175,55,.4);}
+#chat-send{background:linear-gradient(135deg,#9a7015,#d4af37);color:#1a0f00;border:none;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:13px;}
 </style>
 <style>
 #screen-lobby{display:none;min-height:100vh;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#0a1f0c 0%,var(--bg) 70%);}
@@ -601,6 +637,15 @@ header{
     <div class="wt-slots" id="wt-slots"></div>
     <button class="lb-prim" id="btn-start" style="display:none">SPIEL STARTEN →</button>
     <button class="lb-ghost" id="btn-leave">Raum verlassen</button>
+    <div id="wt-chat">
+      <div id="wt-chat-title">💬 CHAT</div>
+      <div id="wt-chat-msgs"></div>
+      <div id="wt-emoji-bar"></div>
+      <div id="wt-chat-input-row">
+        <input id="wt-chat-input" placeholder="Nachricht…" maxlength="120" autocomplete="off">
+        <button id="wt-chat-send">→</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -818,6 +863,7 @@ const MP={
           G=mpFixArrays(raw);
           if(document.getElementById('screen-game').style.display!=='block'){
             document.getElementById('screen-waiting').classList.remove('active');
+          initGameChat();
             document.getElementById('screen-name').style.display='none';
             document.getElementById('screen-game').style.display='block';
             handOrder=null;
@@ -1896,7 +1942,7 @@ async function mpCreate(){
   }
   MP.players=players;
   await MP.roomRef.set({status:'waiting',NP:lbCount,players,host:0,created:Date.now()});
-  mpShowWaiting();MP.listen();
+  mpShowWaiting();MP.listen();initWaitChat();
 }
 
 async function mpJoin(){
@@ -1921,7 +1967,7 @@ async function mpJoin(){
   MP.players=players;
   MP.on=true; // Mark as multiplayer participant
   await MP.roomRef.child('players').set(players);
-  mpShowWaiting();MP.listen();
+  mpShowWaiting();MP.listen();initWaitChat();
 }
 
 function mpShowWaiting(){
@@ -2000,7 +2046,7 @@ async function mpHostStart(){
 }
 
 function mpLeave(){
-  MP.stop();
+  stopChat();MP.stop();
   document.getElementById('screen-waiting').classList.remove('active');
   document.getElementById('screen-lobby').classList.add('active');
 }
@@ -2055,5 +2101,18 @@ window.addEventListener('DOMContentLoaded',()=>{
   else document.getElementById('screen-lobby').classList.add('active');
 });
 </script>
+
+<div id="chat-wrap">
+  <div id="chat-panel">
+    <div id="chat-title">💬 CHAT</div>
+    <div id="chat-msgs"></div>
+    <div id="chat-emoji-bar"></div>
+    <div id="chat-input-row">
+      <input id="chat-input" placeholder="Nachricht…" maxlength="120" autocomplete="off">
+      <button id="chat-send">→</button>
+    </div>
+  </div>
+  <button id="chat-toggle">💬 Chat <span id="chat-badge"></span></button>
+</div>
 </body>
 </html>
