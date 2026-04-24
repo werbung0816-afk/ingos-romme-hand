@@ -857,7 +857,7 @@ const MP={
           }
         }
         const raw=room.gameState;
-        if(!G||raw.ts>(G.ts||0)){
+        if(!G||raw.ts>=(G.ts||0)){
           const oldPhase=G?G.phase:null;
           // Fix Firebase array->object conversion
           G=mpFixArrays(raw);
@@ -870,11 +870,35 @@ const MP={
             const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
           }
           render();
-          if(G.phase!==oldPhase){
-            if(G.phase==='roundEnd')showRoundEnd();
-            else if(G.phase==='buyIn')showBuyIn();
-            else if(G.phase==='gameOver')showGameOver();
-            else if(G.phase==='playing'){
+          // Show modals on phase change OR if modal not yet open (guest catch-up)
+          const roundModal=document.getElementById('modal-round');
+          const buyModal=document.getElementById('modal-buyin');
+          const roundOpen=roundModal&&roundModal.classList.contains('open');
+          const buyOpen=buyModal&&buyModal.classList.contains('open');
+          if(G.phase==='roundEnd'&&(G.phase!==oldPhase||!roundOpen))showRoundEnd();
+          else if(G.phase==='buyIn'){
+            // Host: if all buyIn decisions are in, start next round
+            if(MP.host&&G.buyInPending&&G.buyInPending.length===0){
+              const ns=G.scores;const ne=G.eliminated;const nc=G.contributions;const newTotal=G.totalPot;
+              const active=[...Array(NP).keys()].filter(i=>!ne.includes(i));
+              const underMax=active.filter(i=>ns[i]<MAX);
+              if(active.length<=1||underMax.length<=1){G={...G,phase:'gameOver'};showGameOver();MP.push();}
+              else{
+                G=deal(ns,G.round+1,ne,G.playerNames,nc,newTotal);
+                handOrder=null;
+                const fp2=G.currentPlayer;
+                G.message=G.mustDiscard
+                  ?(G.playerNames[fp2]+' hat 11 Karten'+(fp2===ME?' — leg ab oder drück FERTIG!':''))
+                  :(fp2===ME?(G.playerNames[ME]+', dein Zug — Karte ziehen!'):(G.playerNames[fp2]+' denkt...'));
+                const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
+                closeModal('modal-buyin');render();scheduleAI();MP.push();MP.schedAI();
+              }
+            } else if(!buyOpen||G.phase!==oldPhase){
+              showBuyIn();
+            }
+          }
+          else if(G.phase==='gameOver'&&G.phase!==oldPhase)showGameOver();
+          else if(G.phase==='playing'&&G.phase!==oldPhase){
               // Button wieder aktivieren (war evtl. durch Warte-Screen deaktiviert)
               const nrBtn=document.getElementById('btn-next-round');
               if(nrBtn){nrBtn.disabled=false;nrBtn.textContent='Nächste Runde →';}
@@ -882,7 +906,6 @@ const MP={
               handOrder=null;
               const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
             }
-          }
           if(MP.host&&G.phase==='playing'){
             this.schedAI();
           }
