@@ -2230,6 +2230,14 @@ function mpLeave(){
 // INIT
 // ═══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
+  // Restore saved player name
+  try{
+    var saved=localStorage.getItem('sd_player_name');
+    if(saved){
+      var ni=document.getElementById('solo-name');
+      if(ni&&!ni.value)ni.value=saved;
+    }
+  }catch(e){}
   const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
   on('btn-solo',()=>{
     document.getElementById('screen-lobby').classList.remove('active');
@@ -2358,9 +2366,8 @@ function initGameChat(){
       // Update bottom bar text
       var barEl=document.getElementById('chat-bar-text');
       if(barEl){barEl.innerHTML='<span style="color:rgba(232,224,208,.95)">'+safe+'</span><span style="color:#d4af37;font-weight:700;margin-left:6px">— '+senderSafe+'</span>';}
-      // Update inline area immediately
-      var inlineEl=document.getElementById('chat-inline');
-      if(inlineEl)inlineEl.innerHTML=window._lastChatHtml;
+      // Call render() so status-msg gets updated immediately
+      if(typeof render==='function')render();
       // Flash bar
       var chatBarEl=document.getElementById('chat-bar');
       if(chatBarEl){
