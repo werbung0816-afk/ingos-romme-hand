@@ -600,7 +600,7 @@ header{
 
     <div class="lb-div"></div>
     <div class="lb-lbl">MULTIPLAYER ERSTELLEN</div>
-    <input class="lb-input" id="lb-host-name" placeholder="Dein Name" maxlength="16" autocomplete="off">
+    <input class="lb-input" id="lb-name" placeholder="Dein Name" maxlength="16" autocomplete="off">
     <div class="lb-lbl" style="margin-top:12px">SPIELERANZAHL</div>
     <div class="lb-seg">
       <button class="lb-btn" id="btn-count-2">2 Spieler</button>
@@ -620,8 +620,17 @@ header{
       <input class="lb-input" id="lb-join-code" placeholder="CODE" maxlength="8">
       <button class="lb-prim" id="btn-join">BEITRETEN</button>
     </div>
-    <input class="lb-input" id="lb-join-name" placeholder="Dein Name" maxlength="16" style="margin-top:8px" autocomplete="off">
-  </div>
+  
+    <div style="border-top:1px solid rgba(212,175,55,.1);margin-top:14px;padding-top:12px;">
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:rgba(212,175,55,.4);margin-bottom:6px">💬 LOBBY CHAT</div>
+      <div id="lobby-chat-msgs" style="height:80px;overflow-y:auto;background:rgba(0,0,0,.2);border:1px solid rgba(212,175,55,.1);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;gap:3px;margin-bottom:6px;font-size:12px;color:rgba(232,224,208,.8);scrollbar-width:thin;"></div>
+      <div id="lobby-emoji-bar" style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:5px;"></div>
+      <div style="display:flex;gap:6px;">
+        <input id="lobby-chat-input" class="lb-input" placeholder="Nachricht…" maxlength="120" style="flex:1;padding:8px 10px;" autocomplete="off">
+        <button id="lobby-chat-send" style="background:linear-gradient(135deg,#9a7015,#d4af37);color:#1a0f00;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:14px;">→</button>
+      </div>
+    </div>
+</div>
 </div>
 
 <!-- WAITING ROOM -->
@@ -1953,7 +1962,7 @@ function genCode(){return String(Math.floor(1000+Math.random()*9000));}
 
 async function mpCreate(){
   const db=getDB();if(!db)return;
-  const name=(document.getElementById('lb-host-name').value.trim()||'Ingo').substr(0,16);
+  const name=(document.getElementById('lb-name').value.trim()||'Ingo').substr(0,16);
   MP.myName=name;MP.host=true;MP.myIdx=0;MP.NP=lbCount;NP=lbCount;ME=0;
   MP.roomCode=genCode();
   MP.roomRef=db.ref('rooms/'+MP.roomCode);
@@ -1971,7 +1980,7 @@ async function mpCreate(){
 async function mpJoin(){
   const db=getDB();if(!db)return;
   const code=document.getElementById('lb-join-code').value.trim();
-  const name=(document.getElementById('lb-join-name').value.trim()||'Gast').substr(0,16);
+  const name=(document.getElementById('lb-name').value.trim()||'Gast').substr(0,16);
   if(!code){alert('Code eingeben!');return;}
   MP.roomRef=db.ref('rooms/'+code);
   const snap=await MP.roomRef.once('value');
@@ -2059,6 +2068,7 @@ async function mpHostStart(){
       :(fp===0?(names[0]+', dein Zug — Karte ziehen!'):(names[fp]+' denkt...'));
     G.ts=Date.now();MP.on=true;
     await MP.roomRef.update({status:'playing',players,gameState:G});
+  try{var ldb4=getDB();if(ldb4)ldb4.ref('rooms/rm_lobby').remove();}catch(e){}
     document.getElementById('screen-waiting').classList.remove('active');
     document.getElementById('screen-name').style.display='none';
     document.getElementById('screen-game').style.display='block';
@@ -2117,11 +2127,12 @@ window.addEventListener('DOMContentLoaded',()=>{
   on('btn-vsort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?vsort(x):x)};handOrder=vsort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
   document.getElementById('name-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')startGame(document.getElementById('name-input').value);});
   document.getElementById('lb-join-code')?.addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,'').slice(0,4));
-  document.getElementById('lb-host-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')mpCreate();});
+  document.getElementById('lb-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')mpCreate();});
   // Auto-join from URL
   const code=new URLSearchParams(location.search).get('join');
   if(code){document.getElementById('lb-join-code').value=code;document.getElementById('screen-lobby').classList.add('active');}
   else document.getElementById('screen-lobby').classList.add('active');
+  setTimeout(initLobbyChat,600);
 });
 
 // ═══════════════════════════════════════
@@ -2139,7 +2150,7 @@ function chatMsgHtml(msg,myName){
 
 function initWaitChat(){
   if(!MP.roomRef)return;
-  _chatRef=MP.roomRef.child('chat');
+  _chatRef=getDB().ref('rooms/rm_lobby');
   const chatDiv=document.getElementById('wt-chat');
   if(chatDiv)chatDiv.classList.add('show');
   const msgs=document.getElementById('wt-chat-msgs');
@@ -2222,6 +2233,55 @@ function stopChat(){
   const badge=document.getElementById('chat-badge');if(badge)badge.classList.remove('has-new');
 }
 
+
+// ── LOBBY CHAT (Rommé Hand) ──
+function initLobbyChat(){
+  var db;try{db=getDB();}catch(e){return;}if(!db)return;
+  var ref=db.ref('rooms/rm_lobby');
+  var msgsEl=document.getElementById('lobby-chat-msgs');
+  var inpEl=document.getElementById('lobby-chat-input');
+  var sendEl=document.getElementById('lobby-chat-send');
+  var emojiEl=document.getElementById('lobby-emoji-bar');
+  if(!msgsEl||!inpEl||!sendEl)return;
+  if(emojiEl&&!emojiEl.children.length){
+    ['😁', '🥲', '😰', '🥳', '🫣', '🤔', '🤓', '🤪', '💩', '👌', '🥱', '🍻', '🍺', '😂', '🎲', '🙏', '👀', '🪩', '🕺', '😎', '🎁', '🧐', '🙌'].forEach(function(em){
+      var b=document.createElement('button');b.textContent=em;
+      b.style.cssText='background:none;border:none;cursor:pointer;font-size:15px;padding:2px 3px;';
+      b.onclick=function(){inpEl.value+=em;inpEl.focus();};
+      emojiEl.appendChild(b);
+    });
+  }
+  ref.remove(function(){
+    ref.push({sender:'Ingo',text:'Na? Kannste auch nicht schlafen?',ts:Date.now()});
+  });
+  ref.limitToLast(20).on('child_added',function(snap){
+    var msg=snap.val();if(!msg)return;
+    var d=document.createElement('div');d.style.cssText='line-height:1.4;';
+    var t=String(msg.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    var n=String(msg.sender||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    var reCode=/\b(\d{4})\b/;
+    var cm=t.match(reCode);
+    if(cm){
+      var c4=cm[1];
+      var linked=t.replace(c4,'<b class="lobby-code" data-code="'+c4+'" style="color:#f0d060;cursor:pointer;border-bottom:1px solid #d4af37">'+c4+'</b>');
+      d.innerHTML='<span>'+linked+'</span><span style="color:#d4af37;font-weight:600;margin-left:5px;">— '+n+'</span>';
+    } else {
+      d.innerHTML='<span>'+t+'</span><span style="color:#d4af37;font-weight:600;margin-left:5px;">— '+n+'</span>';
+    }
+    msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+  });
+  msgsEl.addEventListener('click',function(e){
+    var el=e.target.closest&&e.target.closest('.lobby-code');
+    if(el){var jc=document.getElementById('lb-join-code');if(jc){jc.value=el.dataset.code;jc.focus();}}
+  });
+  function send(){
+    var t=inpEl.value.trim();if(!t)return;
+    var nm=(document.getElementById('lb-name')&&document.getElementById('lb-name').value.trim())||'Gast';
+    ref.push({sender:nm,text:t,ts:Date.now()});inpEl.value='';
+  }
+  sendEl.onclick=send;
+  inpEl.addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+}
 </script>
 
 <div id="chat-wrap">
