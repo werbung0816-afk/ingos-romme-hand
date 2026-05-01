@@ -892,7 +892,7 @@ const MP={
             // Host: auto-decide for AI players
           if(MP.host&&G.buyInPending&&G.buyInPending.length>0){
             G.buyInPending.filter(pi2=>MP.players[pi2]&&MP.players[pi2].ai).forEach(pi2=>{
-              setTimeout(()=>doBuyIn(pi2,true),600);
+              setTimeout(()=>doBuyIn(pi2,true),5000);
             });
           }
           if(MP.host&&G.buyInPending&&G.buyInPending.length===0){
@@ -1294,7 +1294,7 @@ function scheduleAI(){
   } else {
     if(G.currentPlayer===ME)return;
   }
-  aiTimer=setTimeout(runAI,1500);
+  aiTimer=setTimeout(runAI,5000);
 }
 
 // ── PLAYER ACTIONS ─────────────────────────────────────────
@@ -1500,7 +1500,7 @@ function showBuyIn(){
   // Solo: AI players auto-buy in immediately
   G.buyInPending.filter(p=>G.playerNames[p]).forEach(p=>{
     const isAI = p !== ME;
-    if(isAI){ setTimeout(()=>doBuyIn(p,true), 800); return; } // AI always buys in
+    if(isAI){ setTimeout(()=>doBuyIn(p,true), 5000); return; } // AI always buys in
     const div=document.createElement('div');div.className='buy-card';
     div.innerHTML=`
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
