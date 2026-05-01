@@ -2095,6 +2095,7 @@ function genCode(){return String(Math.floor(1000+Math.random()*9000));}
 async function mpCreate(){
   const db=getDB();if(!db)return;
   const name=(document.getElementById('lb-name').value.trim()||'Ingo').substr(0,16);
+  try{localStorage.setItem('romme_player_name',name);}catch(e){}
   MP.myName=name;MP.host=true;MP.myIdx=0;MP.NP=lbCount;NP=lbCount;ME=0;
   MP.roomCode=genCode();
   MP.roomRef=db.ref('rooms/'+MP.roomCode);
@@ -2118,6 +2119,7 @@ async function mpJoin(){
   const db=getDB();if(!db)return;
   const code=document.getElementById('lb-join-code').value.trim();
   const name=(document.getElementById('lb-name').value.trim()||'Gast').substr(0,16);
+  try{localStorage.setItem('romme_player_name',name);}catch(e){}
   if(!code){alert('Code eingeben!');return;}
   MP.roomRef=db.ref('rooms/'+code);
   const snap=await MP.roomRef.once('value');
@@ -2232,9 +2234,9 @@ function mpLeave(){
 window.addEventListener('DOMContentLoaded',()=>{
   // Restore saved player name
   try{
-    var saved=localStorage.getItem('sd_player_name');
+    var saved=localStorage.getItem('romme_player_name');
     if(saved){
-      var ni=document.getElementById('solo-name');
+      var ni=document.getElementById('lb-name');
       if(ni&&!ni.value)ni.value=saved;
     }
   }catch(e){}
