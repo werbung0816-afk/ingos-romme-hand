@@ -884,10 +884,18 @@ const MP={
           const buyModal=document.getElementById('modal-buyin');
           const roundOpen=roundModal&&roundModal.classList.contains('open');
           const buyOpen=buyModal&&buyModal.classList.contains('open');
-          if(G.phase==='roundEnd'&&(G.phase!==oldPhase||!roundOpen))showRoundEnd();
+          if(G.phase==='roundEnd'){
+            if(G.phase!==oldPhase||!roundOpen) showRoundEnd();
+          }
           else if(G.phase==='buyIn'){
             // Host: if all buyIn decisions are in, start next round
-            if(MP.host&&G.buyInPending&&G.buyInPending.length===0){
+            // Host: auto-decide for AI players
+          if(MP.host&&G.buyInPending&&G.buyInPending.length>0){
+            G.buyInPending.filter(pi2=>MP.players[pi2]&&MP.players[pi2].ai).forEach(pi2=>{
+              setTimeout(()=>doBuyIn(pi2,true),600);
+            });
+          }
+          if(MP.host&&G.buyInPending&&G.buyInPending.length===0){
               const ns=G.scores;const ne=G.eliminated;const nc=G.contributions;const newTotal=G.totalPot;
               const active=[...Array(NP).keys()].filter(i=>!ne.includes(i));
               const underMax=active.filter(i=>ns[i]<MAX);
@@ -1286,7 +1294,7 @@ function scheduleAI(){
   } else {
     if(G.currentPlayer===ME)return;
   }
-  aiTimer=setTimeout(runAI,950);
+  aiTimer=setTimeout(runAI,1500);
 }
 
 // ── PLAYER ACTIONS ─────────────────────────────────────────
@@ -1489,8 +1497,10 @@ function showBuyIn(){
     return;
   }
 
-  // Solo: alle pending Spieler anzeigen
+  // Solo: AI players auto-buy in immediately
   G.buyInPending.filter(p=>G.playerNames[p]).forEach(p=>{
+    const isAI = p !== ME;
+    if(isAI){ setTimeout(()=>doBuyIn(p,true), 800); return; } // AI always buys in
     const div=document.createElement('div');div.className='buy-card';
     div.innerHTML=`
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -2079,6 +2089,11 @@ async function mpCreate(){
   MP.players=players;
   await MP.roomRef.set({status:'waiting',NP:lbCount,players,host:0,created:Date.now()});
   mpShowWaiting();MP.listen();initWaitChat();
+  // Post room code to lobby chat
+  try{var ldb=getDB();if(ldb)ldb.ref('rooms/rm_lobby').push({
+    sender:name,
+    text:'Raum '+MP.roomCode+' ist offen — kommt rein! 🎲',ts:Date.now()
+  });}catch(e){}
 }
 
 async function mpJoin(){
@@ -2104,6 +2119,11 @@ async function mpJoin(){
   MP.on=true; // Mark as multiplayer participant
   await MP.roomRef.child('players').set(players);
   mpShowWaiting();MP.listen();initWaitChat();
+  // Post room code to lobby chat
+  try{var ldb=getDB();if(ldb)ldb.ref('rooms/rm_lobby').push({
+    sender:name,
+    text:'Raum '+MP.roomCode+' ist offen — kommt rein! 🎲',ts:Date.now()
+  });}catch(e){}
 }
 
 function mpShowWaiting(){
