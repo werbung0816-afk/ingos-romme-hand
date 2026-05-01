@@ -717,6 +717,7 @@ header{
     <div class="s-dot" id="s-dot"></div>
     <span id="status-msg">Dein Zug — Karte ziehen!</span>
   </div>
+  <div id="chat-inline" style="display:none;font-size:11px;color:rgba(212,175,55,.6);padding:2px 14px 4px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
 
   <div class="felt">
     <div class="opps" id="opps"></div>
@@ -2343,20 +2344,29 @@ function initGameChat(){
   if(_chatRef&&!_chatListener){
     _chatListener=_chatRef.on('child_added',snap=>{
       const msg=snap.val();if(!msg)return;
-      // Update bottom bar — always visible
+      // Update bottom bar text
+      var safe=(msg.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+      var senderSafe=(msg.sender||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;');
       var barEl=document.getElementById('chat-bar-text');
       if(barEl){
-        var safe=(msg.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
-        var senderSafe=(msg.sender||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;');
         barEl.innerHTML='<span style="color:rgba(232,224,208,.95)">'+safe+'</span><span style="color:#d4af37;font-weight:700;margin-left:6px">— '+senderSafe+'</span>';
       }
-      // Flash the entire bar to draw attention
+      // Update inline status area
+      var inlineEl=document.getElementById('chat-inline');
+      if(inlineEl){
+        inlineEl.style.display='block';
+        inlineEl.innerHTML='💬 <span style="color:rgba(232,224,208,.8)">'+safe+'</span><span style="color:#d4af37;font-weight:600;margin-left:4px">— '+senderSafe+'</span>';
+        // Fade out after 8s
+        clearTimeout(inlineEl._fadeTimer);
+        inlineEl._fadeTimer=setTimeout(function(){if(inlineEl)inlineEl.style.display='none';},8000);
+      }
+      // Flash bar
       var chatBarEl=document.getElementById('chat-bar');
       if(chatBarEl){
         chatBarEl.style.background='rgba(212,175,55,.18)';
-        setTimeout(function(){if(chatBarEl)chatBarEl.style.background='';},2500);
+        setTimeout(function(){if(chatBarEl)chatBarEl.style.background='';},2000);
       }
-      // Also ensure chat-wrap is visible
+      // Ensure chat-wrap visible
       var cwEl=document.getElementById('chat-wrap');
       if(cwEl&&cwEl.style.display==='none')cwEl.style.display='flex';
       const gm=document.getElementById('chat-msgs');
