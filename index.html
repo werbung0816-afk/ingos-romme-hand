@@ -713,12 +713,9 @@ header{
 
   <div class="scores" id="scores"></div>
 
-  <div class="status" style="flex-direction:column;align-items:flex-start;">
-    <div style="display:flex;align-items:center;gap:7px;width:100%;">
-      <div class="s-dot" id="s-dot"></div>
-      <span id="status-msg">Dein Zug — Karte ziehen!</span>
-    </div>
-    <div id="chat-inline" style="font-size:11px;color:rgba(212,175,55,.65);font-style:italic;padding:0 22px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+  <div class="status">
+    <div class="s-dot" id="s-dot"></div>
+    <span id="status-msg">Dein Zug — Karte ziehen!</span>
   </div>
 
   <div class="felt">
@@ -1826,11 +1823,15 @@ function render(){
   // Status
   const dot=document.getElementById('s-dot');
   dot.className='s-dot'+(myTurn&&!goOut?' my':goOut?' go':'');
-  document.getElementById('status-msg').textContent=G.message;
-  // Refresh inline chat msg
-  var _inl=document.getElementById('chat-inline');
-  if(_inl)_inl.innerHTML=window._lastChatHtml||'';
-
+  var _smEl=document.getElementById('status-msg');
+  if(_smEl){
+    if(window._lastChatHtml){
+      _smEl.innerHTML=(G.message||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        +'<br><span style="font-size:10px;opacity:.75">'+window._lastChatHtml+'</span>';
+    } else {
+      _smEl.textContent=G.message||'';
+    }
+  }
   // Round
   document.getElementById('round-chip').textContent=`Runde ${G.round}`;
 
@@ -2338,10 +2339,7 @@ function initGameChat(){
   var barEl=document.getElementById('chat-bar-text');if(barEl)barEl.textContent='Antippen zum Chatten…';
   // Clear old messages
   var oldMsgs=document.getElementById('chat-msgs');if(oldMsgs)oldMsgs.innerHTML='';
-  // Show default hint in inline area
   window._lastChatHtml=window._lastChatHtml||'';
-  var _inlInit=document.getElementById('chat-inline');
-  if(_inlInit)_inlInit.innerHTML=window._lastChatHtml;
   // Emoji bar
   const eb=document.getElementById('chat-emoji-bar');
   if(eb){eb.innerHTML='';
