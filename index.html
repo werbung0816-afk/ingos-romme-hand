@@ -537,6 +537,11 @@ header{
 #chat-input{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(212,175,55,.2);border-radius:8px;padding:7px 10px;color:#e8e0d0;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;}
 #chat-input:focus{border-color:rgba(212,175,55,.4);}
 #chat-send{background:linear-gradient(135deg,#9a7015,#d4af37);color:#1a0f00;border:none;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:13px;}
+/* iPhone: opponent face-down cards 50% smaller */
+@media(max-width:430px) and (-webkit-min-device-pixel-ratio:2){
+  .bcard{width:14px !important;height:21px !important;border-radius:3px !important;}
+  .opp-cards{gap:2px !important;}
+}
 </style>
 <style>
 #screen-lobby{display:none;min-height:100vh;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#0a1f0c 0%,var(--bg) 70%);}
@@ -595,30 +600,26 @@ header{
       </div>
     </div>
 
-    <div class="lb-lbl">SOLO SPIELEN</div>
-    <button class="lb-prim" id="btn-solo">SOLO STARTEN →</button>
-
-    <div class="lb-div"></div>
-    <div class="lb-lbl">MULTIPLAYER ERSTELLEN</div>
+    <div class="lb-lbl">DEIN NAME</div>
     <input class="lb-input" id="lb-name" placeholder="Dein Name" maxlength="16" autocomplete="off">
+
     <div class="lb-lbl" style="margin-top:12px">SPIELERANZAHL</div>
     <div class="lb-seg">
-      <button class="lb-btn" id="btn-count-2">2 Spieler</button>
-      <button class="lb-btn on" id="btn-count-3">3 Spieler</button>
-      <button class="lb-btn" id="btn-count-4">4 Spieler</button>
+      <button class="lb-btn" id="btn-count-2">2</button>
+      <button class="lb-btn on" id="btn-count-3">3</button>
+      <button class="lb-btn" id="btn-count-4">4</button>
     </div>
-    <div class="lb-lbl" style="margin-top:12px">FREIE PLÄTZE</div>
-    <div class="lb-seg">
-      <button class="lb-btn on" id="btn-fill-human">Auf Spieler warten</button>
-      <button class="lb-btn" id="btn-fill-ai">KI auffüllen</button>
+
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="lb-prim" id="btn-solo" style="flex:1;font-size:12px;padding:12px 8px;letter-spacing:1px;">SOLO →</button>
+      <button class="lb-prim" id="btn-create" style="flex:1;font-size:12px;padding:12px 8px;letter-spacing:1px;">MULTIPLAYER →</button>
     </div>
-    <button class="lb-prim" id="btn-create">SPIEL ERSTELLEN →</button>
 
     <div class="lb-div"></div>
-    <div class="lb-lbl">SPIEL BEITRETEN</div>
+    <div class="lb-lbl">RAUM BEITRETEN</div>
     <div class="lb-join">
       <input class="lb-input" id="lb-join-code" placeholder="CODE" maxlength="8">
-      <button class="lb-prim" id="btn-join">BEITRETEN</button>
+      <button class="lb-prim" id="btn-join">→</button>
     </div>
   
     <div style="border-top:1px solid rgba(212,175,55,.1);margin-top:14px;padding-top:12px;">
