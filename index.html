@@ -88,7 +88,7 @@ body{
 #screen-game{
   min-height:100vh;
   background:linear-gradient(160deg,#020a04 0%,#060f07 55%,#040c05 100%);
-  padding-bottom:32px;
+  padding-bottom:calc(50px + env(safe-area-inset-bottom,0px));
 }
 header{
   display:flex;align-items:center;justify-content:space-between;
@@ -2343,17 +2343,22 @@ function initGameChat(){
   if(_chatRef&&!_chatListener){
     _chatListener=_chatRef.on('child_added',snap=>{
       const msg=snap.val();if(!msg)return;
-      // Update bottom bar
+      // Update bottom bar — always visible
       var barEl=document.getElementById('chat-bar-text');
       if(barEl){
-        var safe=msg.text.replace(/&/g,'&amp;').replace(/</g,'&lt;');
-        barEl.innerHTML='<span style="color:rgba(232,224,208,.9)">'+safe+'</span><span style="color:#d4af37;font-weight:700;margin-left:6px">— '+msg.sender+'</span>';
+        var safe=(msg.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        var senderSafe=(msg.sender||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        barEl.innerHTML='<span style="color:rgba(232,224,208,.95)">'+safe+'</span><span style="color:#d4af37;font-weight:700;margin-left:6px">— '+senderSafe+'</span>';
       }
+      // Flash the entire bar to draw attention
       var chatBarEl=document.getElementById('chat-bar');
-      if(chatBarEl&&!_chatPanelOpen){
-        chatBarEl.style.background='rgba(212,175,55,.15)';
-        setTimeout(function(){chatBarEl.style.background='';},2000);
+      if(chatBarEl){
+        chatBarEl.style.background='rgba(212,175,55,.18)';
+        setTimeout(function(){if(chatBarEl)chatBarEl.style.background='';},2500);
       }
+      // Also ensure chat-wrap is visible
+      var cwEl=document.getElementById('chat-wrap');
+      if(cwEl&&cwEl.style.display==='none')cwEl.style.display='flex';
       const gm=document.getElementById('chat-msgs');
       if(gm){gm.insertAdjacentHTML('beforeend',chatMsgHtml(msg,MP.myName));gm.scrollTop=gm.scrollHeight;}
     });
