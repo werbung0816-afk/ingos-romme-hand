@@ -2095,7 +2095,7 @@ function genCode(){return String(Math.floor(1000+Math.random()*9000));}
 async function mpCreate(){
   const db=getDB();if(!db)return;
   const name=(document.getElementById('lb-name').value.trim()||'Ingo').substr(0,16);
-  try{localStorage.setItem('romme_player_name',name);}catch(e){}
+  try{localStorage.setItem('romme_player_name',name);sessionStorage.setItem('romme_player_name',name);}catch(e){}
   MP.myName=name;MP.host=true;MP.myIdx=0;MP.NP=lbCount;NP=lbCount;ME=0;
   MP.roomCode=genCode();
   MP.roomRef=db.ref('rooms/'+MP.roomCode);
@@ -2119,7 +2119,7 @@ async function mpJoin(){
   const db=getDB();if(!db)return;
   const code=document.getElementById('lb-join-code').value.trim();
   const name=(document.getElementById('lb-name').value.trim()||'Gast').substr(0,16);
-  try{localStorage.setItem('romme_player_name',name);}catch(e){}
+  try{localStorage.setItem('romme_player_name',name);sessionStorage.setItem('romme_player_name',name);}catch(e){}
   if(!code){alert('Code eingeben!');return;}
   MP.roomRef=db.ref('rooms/'+code);
   const snap=await MP.roomRef.once('value');
@@ -2234,10 +2234,10 @@ function mpLeave(){
 window.addEventListener('DOMContentLoaded',()=>{
   // Restore saved player name
   try{
-    var saved=localStorage.getItem('romme_player_name');
+    var saved=localStorage.getItem('romme_player_name')||sessionStorage.getItem('romme_player_name');
     if(saved){
       var ni=document.getElementById('lb-name');
-      if(ni&&!ni.value)ni.value=saved;
+      if(ni)ni.value=saved;
     }
   }catch(e){}
   const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
@@ -2356,9 +2356,10 @@ function initGameChat(){
     ['😁', '🥲', '😰', '🥳', '🫣', '🤔', '🤓', '🤪', '💩', '👌', '🥱', '🍻', '🍺', '😂', '🎲', '🙏', '👀', '🪩', '🕺', '😎', '🎁', '🧐', '🙌'].forEach(em=>{const b=document.createElement('button');b.className='chat-emoji-btn';b.textContent=em;
       b.onclick=()=>{const i=document.getElementById('chat-input');if(i){i.value+=em;i.focus();}};eb.appendChild(b);});
   }
-  // Re-use existing listener or start new one
-  if(!_chatRef&&MP.roomRef)_chatRef=MP.roomRef.child('chat');
-  if(_chatRef&&!_chatListener){
+  // Always point to game chat ref and reattach listener
+  if(_chatListener&&_chatRef){_chatRef.off('child_added',_chatListener);_chatListener=null;}
+  _chatRef=MP.roomRef?MP.roomRef.child('chat'):null; // always reset to game path
+  if(_chatRef){
     _chatListener=_chatRef.on('child_added',snap=>{
       const msg=snap.val();if(!msg)return;
       // Store last msg globally
