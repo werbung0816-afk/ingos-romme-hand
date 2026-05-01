@@ -1687,6 +1687,8 @@ function renderHandOnly(){
   const hint=document.getElementById('hint');
   hint.className='hint'+(clickable&&!goOut?' visible':'');
   const cardsEl=document.getElementById('hand-cards');
+  // Prevent context menu on long-press (iOS "Print", Android share sheet)
+  cardsEl.addEventListener('contextmenu',e=>e.preventDefault());
   cardsEl.innerHTML='';
   let displayHand=G.hands[ME]||[];
   if(handOrder&&handOrder.length){
@@ -1706,6 +1708,7 @@ function renderHandOnly(){
     if(clickable) div.querySelector('.card').addEventListener('click',()=>doDiscard(card.id));
     div.draggable=true;
     div.setAttribute('draggable','true');
+    // ── Desktop: standard HTML5 drag ──
     div.addEventListener('dragstart',e=>{
       dragIdx=i;
       e.dataTransfer.setData('text/plain',String(i));
@@ -1734,6 +1737,56 @@ function renderHandOnly(){
       handOrder=ids;
       dragIdx=null;
       renderHandOnly();
+    });
+    // ── Mobile: touch-move drag (no long-press, no context menu) ──
+    div.addEventListener('touchstart',e=>{
+      div._touchStartX=e.touches[0].clientX;
+      div._touchStartY=e.touches[0].clientY;
+      div._touchDragging=false;
+    },{passive:true});
+    div.addEventListener('touchmove',e=>{
+      if(!div._touchStartX)return;
+      const dx=e.touches[0].clientX-div._touchStartX;
+      const dy=e.touches[0].clientY-div._touchStartY;
+      if(!div._touchDragging&&Math.abs(dx)>8){
+        div._touchDragging=true;
+        dragIdx=i;
+        div.querySelector('.card').classList.add('dragging');
+      }
+      if(!div._touchDragging)return;
+      e.preventDefault();
+      // Find which card we're hovering over
+      const touch=e.touches[0];
+      const el=document.elementFromPoint(touch.clientX,touch.clientY);
+      const targetWrap=el&&el.closest('[data-id]');
+      document.querySelectorAll('.card').forEach(c=>c.classList.remove('drag-over'));
+      if(targetWrap&&targetWrap!==div){
+        const tc=targetWrap.querySelector('.card');
+        if(tc)tc.classList.add('drag-over');
+        div._touchTarget=targetWrap;
+      }
+    },{passive:false});
+    div.addEventListener('touchend',()=>{
+      div.querySelector('.card').classList.remove('dragging');
+      document.querySelectorAll('.card').forEach(c=>c.classList.remove('drag-over'));
+      if(div._touchDragging&&div._touchTarget){
+        const toIdx=parseInt(div._touchTarget.getAttribute('data-id-idx')||
+          [...document.getElementById('hand-cards').children].indexOf(div._touchTarget));
+        const allWraps=[...document.getElementById('hand-cards').children];
+        allWraps.forEach((w,idx)=>w.setAttribute('data-id-idx',idx));
+        const fromIdx=i;
+        const toI=allWraps.indexOf(div._touchTarget);
+        if(toI>=0&&toI!==fromIdx){
+          const ids=allWraps.map(w=>parseInt(w.getAttribute('data-id')));
+          const[moved]=ids.splice(fromIdx,1);
+          ids.splice(toI,0,moved);
+          handOrder=ids;
+          renderHandOnly();
+        }
+      }
+      div._touchDragging=false;
+      div._touchTarget=null;
+      dragIdx=null;
     });
     cardsEl.appendChild(div);
   });
@@ -1847,6 +1900,7 @@ function render(){
     // Drag
     div.draggable=true;
     div.setAttribute('draggable','true');
+    // ── Desktop: standard HTML5 drag ──
     div.addEventListener('dragstart',e=>{
       dragIdx=i;
       e.dataTransfer.setData('text/plain',String(i));
@@ -1875,6 +1929,56 @@ function render(){
       handOrder=ids;
       dragIdx=null;
       renderHandOnly();
+    });
+    // ── Mobile: touch-move drag (no long-press, no context menu) ──
+    div.addEventListener('touchstart',e=>{
+      div._touchStartX=e.touches[0].clientX;
+      div._touchStartY=e.touches[0].clientY;
+      div._touchDragging=false;
+    },{passive:true});
+    div.addEventListener('touchmove',e=>{
+      if(!div._touchStartX)return;
+      const dx=e.touches[0].clientX-div._touchStartX;
+      const dy=e.touches[0].clientY-div._touchStartY;
+      if(!div._touchDragging&&Math.abs(dx)>8){
+        div._touchDragging=true;
+        dragIdx=i;
+        div.querySelector('.card').classList.add('dragging');
+      }
+      if(!div._touchDragging)return;
+      e.preventDefault();
+      // Find which card we're hovering over
+      const touch=e.touches[0];
+      const el=document.elementFromPoint(touch.clientX,touch.clientY);
+      const targetWrap=el&&el.closest('[data-id]');
+      document.querySelectorAll('.card').forEach(c=>c.classList.remove('drag-over'));
+      if(targetWrap&&targetWrap!==div){
+        const tc=targetWrap.querySelector('.card');
+        if(tc)tc.classList.add('drag-over');
+        div._touchTarget=targetWrap;
+      }
+    },{passive:false});
+    div.addEventListener('touchend',()=>{
+      div.querySelector('.card').classList.remove('dragging');
+      document.querySelectorAll('.card').forEach(c=>c.classList.remove('drag-over'));
+      if(div._touchDragging&&div._touchTarget){
+        const toIdx=parseInt(div._touchTarget.getAttribute('data-id-idx')||
+          [...document.getElementById('hand-cards').children].indexOf(div._touchTarget));
+        const allWraps=[...document.getElementById('hand-cards').children];
+        allWraps.forEach((w,idx)=>w.setAttribute('data-id-idx',idx));
+        const fromIdx=i;
+        const toI=allWraps.indexOf(div._touchTarget);
+        if(toI>=0&&toI!==fromIdx){
+          const ids=allWraps.map(w=>parseInt(w.getAttribute('data-id')));
+          const[moved]=ids.splice(fromIdx,1);
+          ids.splice(toI,0,moved);
+          handOrder=ids;
+          renderHandOnly();
+        }
+      }
+      div._touchDragging=false;
+      div._touchTarget=null;
+      dragIdx=null;
     });
     cardsEl.appendChild(div);
   });
