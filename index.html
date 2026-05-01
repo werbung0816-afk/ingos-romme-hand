@@ -717,7 +717,7 @@ header{
     <div class="s-dot" id="s-dot"></div>
     <span id="status-msg">Dein Zug — Karte ziehen!</span>
   </div>
-  <div id="chat-inline" style="display:none;font-size:11px;color:rgba(212,175,55,.6);padding:2px 14px 4px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+  <div id="chat-inline" style="font-size:11px;color:rgba(212,175,55,.6);padding:2px 14px 4px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:16px;"></div>
 
   <div class="felt">
     <div class="opps" id="opps"></div>
@@ -1825,6 +1825,9 @@ function render(){
   const dot=document.getElementById('s-dot');
   dot.className='s-dot'+(myTurn&&!goOut?' my':goOut?' go':'');
   document.getElementById('status-msg').textContent=G.message;
+  // Refresh inline chat msg
+  var _inl=document.getElementById('chat-inline');
+  if(_inl)_inl.innerHTML=window._lastChatHtml||'';
 
   // Round
   document.getElementById('round-chip').textContent=`Runde ${G.round}`;
@@ -2344,22 +2347,16 @@ function initGameChat(){
   if(_chatRef&&!_chatListener){
     _chatListener=_chatRef.on('child_added',snap=>{
       const msg=snap.val();if(!msg)return;
-      // Update bottom bar text
+      // Store last msg globally
       var safe=(msg.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
       var senderSafe=(msg.sender||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+      window._lastChatHtml='💬 <span style="color:rgba(232,224,208,.85)">'+safe+'</span><span style="color:#d4af37;font-weight:600;margin-left:4px">— '+senderSafe+'</span>';
+      // Update bottom bar text
       var barEl=document.getElementById('chat-bar-text');
-      if(barEl){
-        barEl.innerHTML='<span style="color:rgba(232,224,208,.95)">'+safe+'</span><span style="color:#d4af37;font-weight:700;margin-left:6px">— '+senderSafe+'</span>';
-      }
-      // Update inline status area
+      if(barEl){barEl.innerHTML='<span style="color:rgba(232,224,208,.95)">'+safe+'</span><span style="color:#d4af37;font-weight:700;margin-left:6px">— '+senderSafe+'</span>';}
+      // Update inline area immediately
       var inlineEl=document.getElementById('chat-inline');
-      if(inlineEl){
-        inlineEl.style.display='block';
-        inlineEl.innerHTML='💬 <span style="color:rgba(232,224,208,.8)">'+safe+'</span><span style="color:#d4af37;font-weight:600;margin-left:4px">— '+senderSafe+'</span>';
-        // Fade out after 8s
-        clearTimeout(inlineEl._fadeTimer);
-        inlineEl._fadeTimer=setTimeout(function(){if(inlineEl)inlineEl.style.display='none';},8000);
-      }
+      if(inlineEl)inlineEl.innerHTML=window._lastChatHtml;
       // Flash bar
       var chatBarEl=document.getElementById('chat-bar');
       if(chatBarEl){
