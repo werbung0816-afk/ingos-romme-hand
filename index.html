@@ -713,11 +713,13 @@ header{
 
   <div class="scores" id="scores"></div>
 
-  <div class="status">
-    <div class="s-dot" id="s-dot"></div>
-    <span id="status-msg">Dein Zug — Karte ziehen!</span>
+  <div class="status" style="flex-direction:column;align-items:flex-start;">
+    <div style="display:flex;align-items:center;gap:7px;width:100%;">
+      <div class="s-dot" id="s-dot"></div>
+      <span id="status-msg">Dein Zug — Karte ziehen!</span>
+    </div>
+    <div id="chat-inline" style="font-size:11px;color:rgba(212,175,55,.65);font-style:italic;padding:0 22px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
   </div>
-  <div id="chat-inline" style="font-size:11px;color:rgba(212,175,55,.6);padding:2px 14px 4px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:16px;"></div>
 
   <div class="felt">
     <div class="opps" id="opps"></div>
@@ -2336,6 +2338,10 @@ function initGameChat(){
   var barEl=document.getElementById('chat-bar-text');if(barEl)barEl.textContent='Antippen zum Chatten…';
   // Clear old messages
   var oldMsgs=document.getElementById('chat-msgs');if(oldMsgs)oldMsgs.innerHTML='';
+  // Show default hint in inline area
+  window._lastChatHtml=window._lastChatHtml||'';
+  var _inlInit=document.getElementById('chat-inline');
+  if(_inlInit)_inlInit.innerHTML=window._lastChatHtml;
   // Emoji bar
   const eb=document.getElementById('chat-emoji-bar');
   if(eb){eb.innerHTML='';
