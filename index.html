@@ -2358,7 +2358,7 @@ function initGameChat(){
   }
   // Always point to game chat ref and reattach listener
   if(_chatListener&&_chatRef){_chatRef.off('child_added',_chatListener);_chatListener=null;}
-  _chatRef=MP.roomRef?MP.roomRef.child('chat'):null; // always reset to game path
+  _chatRef=getDB().ref('rooms/rm_lobby'); // same path as lobby/waiting room
   if(_chatRef){
     _chatListener=_chatRef.on('child_added',snap=>{
       const msg=snap.val();if(!msg)return;
