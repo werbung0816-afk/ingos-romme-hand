@@ -862,7 +862,7 @@ const MP={
           if(document.getElementById('screen-game').style.display!=='block'){
             document.getElementById('screen-waiting').classList.remove('active');
           initGameChat();
-            document.getElementById('screen-name').style.display='none';
+            void 0; void 0
             document.getElementById('screen-game').style.display='block';
             handOrder=null;
             const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
@@ -2004,7 +2004,7 @@ function startGame(name){
   G.message=G.mustDiscard
     ?`${n}, du hast 11 Karten — leg ab oder drück FERTIG!`
     :`${n}, dein Zug — Karte ziehen!`;
-  document.getElementById('screen-name').style.display='none';
+  void 0; void 0
   document.getElementById('screen-game').style.display='block';
   const ce=document.getElementById('hand-cards');
   if(ce)ce._dealt=false;
@@ -2020,7 +2020,7 @@ function newGame(){
   clearTimeout(aiTimer);
   G=null;handOrder=null;
   document.getElementById('screen-game').style.display='none';
-  document.getElementById('screen-name').style.display='flex';
+  void 0; void 0
   const ce=document.getElementById('hand-cards');
   if(ce)ce._dealt=false;
 }
@@ -2131,7 +2131,7 @@ function mpShowWaiting(){
   document.getElementById('screen-waiting').classList.add('active');
   document.getElementById('wt-code').textContent=MP.roomCode;
   document.getElementById('wt-url').textContent=location.href.split('?')[0]+'?join='+MP.roomCode;
-  if(MP.host)document.getElementById('btn-start').style.display='block';
+  if(MP.host)/* btn-start removed */
   mpRenderWaiting(null);
 }
 
@@ -2194,7 +2194,7 @@ async function mpHostStart(){
     await MP.roomRef.update({status:'playing',players,gameState:G});
   try{var ldb4=getDB();if(ldb4)ldb4.ref('rooms/rm_lobby').remove();}catch(e){}
     document.getElementById('screen-waiting').classList.remove('active');
-    document.getElementById('screen-name').style.display='none';
+    void 0; void 0
     document.getElementById('screen-game').style.display='block';
     handOrder=null;
     const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
@@ -2251,7 +2251,7 @@ window.addEventListener('DOMContentLoaded',()=>{
       endRound();
     }
   });
-  on('btn-new-game',()=>{closeModal('modal-gameover');document.getElementById('screen-game').style.display='none';document.getElementById('screen-name').style.display='none';document.getElementById('screen-lobby').classList.add('active');MP.stop();});
+  on('btn-new-game',()=>{closeModal('modal-gameover');document.getElementById('screen-game').style.display='none';void 0; document.getElementById('screen-lobby').classList.add('active');MP.stop();});
   on('btn-ssort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?ssort(x):x)};handOrder=ssort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
   on('btn-vsort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?vsort(x):x)};handOrder=vsort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
   document.getElementById('name-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')startGame(document.getElementById('name-input').value);});
