@@ -621,8 +621,7 @@ header{
     </div>
 
     <div style="display:flex;gap:8px;margin-top:12px;">
-      <button class="lb-prim" id="btn-solo" style="flex:1;font-size:12px;padding:12px 8px;letter-spacing:1px;">SOLO →</button>
-      <button class="lb-prim" id="btn-create" style="flex:1;font-size:12px;padding:12px 8px;letter-spacing:1px;">MULTIPLAYER →</button>
+      <button class="lb-prim" id="btn-create" style="width:100%;font-size:12px;padding:12px 8px;letter-spacing:1px;">SPIEL ERSTELLEN →</button>
     </div>
 
     <div class="lb-div"></div>
@@ -672,27 +671,6 @@ header{
 <!-- SINGLE PLAYER SCREENS -->
 <canvas id="confetti-canvas"></canvas>
 <!-- NAME ENTRY SCREEN -->
-<div id="screen-name">
-  <div class="name-box">
-    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:8px;">
-      <div style="position:relative;flex-shrink:0;">
-        <img src="data:image/jpeg;base64,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" alt="Ingo" style="width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:center 25%;border:2px solid var(--gold);box-shadow:0 0 20px rgba(212,175,55,.4);">
-        <div style="position:absolute;bottom:-3px;right:-3px;background:linear-gradient(135deg,var(--gold3),var(--gold));border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;">★</div>
-      </div>
-      <div style="text-align:left;">
-        <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:5px;color:rgba(212,175,55,.5);margin-bottom:2px;">I N G O ' S</div>
-        <h1 style="margin:0;font-size:34px;">ROMMÉ</h1>
-      </div>
-    </div>
-    <div class="sub">H A N D</div>
-    <label>DEIN NAME</label>
-    <input type="text" id="name-input" placeholder="Ingo" maxlength="20" autocomplete="off">
-    <div class="info">Du spielst gegen 2 KI-Spieler<br>(Dani, Holly, Julia oder Joschi)</div>
-    <button class="btn-gold" id="btn-play">S P I E L E N  →</button>
-  </div>
-</div>
-
-<!-- GAME SCREEN -->
 <div id="screen-game">
   <header>
     <div class="logo-row">
@@ -1607,7 +1585,9 @@ function doBuyIn(pi,yes){
   let newTotal=G.totalPot||(NP*2);
   if(yes){
     const active=[...Array(NP).keys()].filter(i=>!G.eliminated.includes(i)&&i!==pi);
-    ns[pi]=active.length?Math.max(...active.map(i=>G.scores[i])):G.scores[pi];
+    // Buy in at highest score strictly under MAX; if none exist use 0
+    const underMaxScores=active.map(i=>G.scores[i]).filter(s=>s<MAX);
+    ns[pi]=underMaxScores.length?Math.max(...underMaxScores):0;
     nc[pi]=(nc[pi]||2)+1;
     newTotal+=1;
   }else{
@@ -2241,10 +2221,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     }
   }catch(e){}
   const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
-  on('btn-solo',()=>{
-    document.getElementById('screen-lobby').classList.remove('active');
-    document.getElementById('screen-name').style.display='flex';
-  });
+
   on('btn-create',mpCreate);
   on('btn-join',mpJoin);
   on('btn-start',mpHostStart);
