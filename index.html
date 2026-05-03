@@ -2131,7 +2131,7 @@ function mpShowWaiting(){
   document.getElementById('screen-waiting').classList.add('active');
   document.getElementById('wt-code').textContent=MP.roomCode;
   document.getElementById('wt-url').textContent=location.href.split('?')[0]+'?join='+MP.roomCode;
-  if(MP.host)/* btn-start removed */
+  if(MP.host){const bs=document.getElementById('btn-start');if(bs)bs.style.display='block';}
   mpRenderWaiting(null);
 }
 
