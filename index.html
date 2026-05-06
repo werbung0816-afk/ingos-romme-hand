@@ -792,18 +792,20 @@ const FB_CFG = {
 };
 let _db=null;
 let _authReady=false;
+let _authCallbacks=[];
+function _onAuthReady(fn){if(_authReady)fn();else _authCallbacks.push(fn);}
 function getDB(){
-  if(_db)return _db;
-  try{
-    if(!firebase.apps.length)firebase.initializeApp(FB_CFG);
-    _db=firebase.database();
-    if(!_authReady){
-      _authReady=true;
-      firebase.auth().signInAnonymously().catch(e=>console.warn('Auth:',e));
+  if(!_db){
+    try{
+      if(!firebase.apps.length)firebase.initializeApp(FB_CFG);
+      _db=firebase.database();
+      firebase.auth().signInAnonymously()
+        .then(()=>{_authReady=true;_authCallbacks.forEach(fn=>fn());_authCallbacks=[];})
+        .catch(e=>{console.warn('Auth:',e);_authReady=true;_authCallbacks.forEach(fn=>fn());_authCallbacks=[];});
     }
-    return _db;
+    catch(e){alert('Firebase: '+e.message);return null;}
   }
-  catch(e){alert('Firebase: '+e.message);return null;}
+  return _db;
 }
 
 // ═══════════════════════════════════════════
@@ -2230,10 +2232,11 @@ window.addEventListener('DOMContentLoaded',()=>{
       if(ni)ni.value=saved;
     }
   }catch(e){}
+  getDB(); // init Firebase + anonymous auth early
   const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
 
-  on('btn-create',mpCreate);
-  on('btn-join',mpJoin);
+  on('btn-create',()=>{ getDB(); _onAuthReady(mpCreate); });
+  on('btn-join',()=>{ getDB(); _onAuthReady(mpJoin); });
   on('btn-start',mpHostStart);
   on('btn-leave',mpLeave);
   on('btn-count-2',()=>lbSetCount(2));
@@ -2266,7 +2269,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   on('btn-vsort',()=>{if(!G)return;G={...G,hands:G.hands.map((x,i)=>i===ME?vsort(x):x)};handOrder=vsort(G.hands[ME]).map(c=>c.id);renderHandOnly();});
   document.getElementById('name-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')startGame(document.getElementById('name-input').value);});
   document.getElementById('lb-join-code')?.addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,'').slice(0,4));
-  document.getElementById('lb-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')mpCreate();});
+  document.getElementById('lb-name')?.addEventListener('keydown',e=>{if(e.key==='Enter'){getDB();_onAuthReady(mpCreate);}});
   // Auto-join from URL
   const code=new URLSearchParams(location.search).get('join');
   if(code){document.getElementById('lb-join-code').value=code;document.getElementById('screen-lobby').classList.add('active');}
