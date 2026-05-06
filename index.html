@@ -2274,7 +2274,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const code=new URLSearchParams(location.search).get('join');
   if(code){document.getElementById('lb-join-code').value=code;document.getElementById('screen-lobby').classList.add('active');}
   else document.getElementById('screen-lobby').classList.add('active');
-  setTimeout(initLobbyChat,600);
+  _onAuthReady(initLobbyChat);
 });
 
 // ═══════════════════════════════════════
