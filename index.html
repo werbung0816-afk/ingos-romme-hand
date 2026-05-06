@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/firebase@10.8.1/firebase-app-compat.js"></script>
 <script src="https://unpkg.com/firebase@10.8.1/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/firebase@10.8.1/firebase-auth-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -790,9 +791,18 @@ const FB_CFG = {
   appId:"1:848283747928:web:5ebdf6814518ea87bdac2d"
 };
 let _db=null;
+let _authReady=false;
 function getDB(){
   if(_db)return _db;
-  try{if(!firebase.apps.length)firebase.initializeApp(FB_CFG);_db=firebase.database();return _db;}
+  try{
+    if(!firebase.apps.length)firebase.initializeApp(FB_CFG);
+    _db=firebase.database();
+    if(!_authReady){
+      _authReady=true;
+      firebase.auth().signInAnonymously().catch(e=>console.warn('Auth:',e));
+    }
+    return _db;
+  }
   catch(e){alert('Firebase: '+e.message);return null;}
 }
 
