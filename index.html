@@ -621,8 +621,14 @@ header{
       <button class="lb-btn" id="btn-count-4">4</button>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:12px;">
-      <button class="lb-prim" id="btn-create" style="width:100%;font-size:12px;padding:12px 8px;letter-spacing:1px;">SPIEL ERSTELLEN →</button>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:stretch;">
+      <button class="lb-prim" id="btn-create" style="width:100%;font-size:12px;padding:12px 8px;letter-spacing:1px;margin-top:0;">SPIEL ERSTELLEN →</button>
+      <a href="https://meet.jit.si/ingos-rommehand" target="_blank" rel="noopener"
+        style="display:flex;align-items:center;justify-content:center;width:42px;flex-shrink:0;
+        border-radius:10px;border:1px solid rgba(212,175,55,.3);color:var(--gold);text-decoration:none;
+        background:rgba(212,175,55,.06);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 .82h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      </a>
     </div>
 
     <div class="lb-div"></div>
@@ -688,6 +694,11 @@ header{
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <a href="https://meet.jit.si/ingos-rommehand" target="_blank" rel="noopener" title="Sprachanruf"
+        style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;
+        border-radius:50%;border:1px solid rgba(212,175,55,.3);color:var(--gold);text-decoration:none;flex-shrink:0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 .82h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      </a>
       <button onclick="retrySync()" title="Spiel neu synchronisieren"
         style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;
         border-radius:50%;border:1px solid rgba(212,175,55,.3);background:none;color:var(--gold);
@@ -1294,8 +1305,12 @@ function runAI(){
     drawn=pd<pn?disc.pop():dp.pop();
   }else drawn=dp.pop();
   const nh=[...G.hands[p],drawn];
+  const drewFromDisc=td&&(pen([...G.hands[p],td])<=pen([...G.hands[p],dp.length?dp[dp.length-1]:td]));
+  const drawMsg=drewFromDisc
+    ?`${G.playerNames[p]} nimmt ${drawn.j?'Joker':drawn.r+drawn.s} vom Ablagestapel...`
+    :`${G.playerNames[p]} zieht vom Stapel...`;
   G={...G,hands:G.hands.map((h,i)=>i===p?nh:h),drawPile:dp,discardPile:disc,
-    message:`${G.playerNames[p]} zieht eine Karte...`};
+    message:drawMsg};
   render();
 
   // Phase 2: Ablegen nach Pause — dann Firebase-Push
@@ -2242,17 +2257,34 @@ function mpLeave(){
 // Gast: erzwingt Re-Render des aktuellen Stands.
 // Bei hängendem KI-Zug: startet AI-Timer neu.
 function retrySync(){
-  if(!G){render();return;}
   if(MP.on&&MP.host){
-    G.ts=Date.now();
-    MP.push();
-    if(G.phase==='playing'){
-      clearTimeout(aiTimer);
-      scheduleAI();
-      MP.schedAI();
-    }
+    // Host: aktuellen Stand pushen + KI-Timer neu starten
+    if(G)G.ts=Date.now();
+    if(G)MP.push();
+    if(G&&G.phase==='playing'){clearTimeout(aiTimer);scheduleAI();MP.schedAI();}
+    render();
+  } else if(MP.on&&!MP.host&&MP.roomRef){
+    // Gast: frischen Stand direkt von Firebase lesen und anwenden
+    MP.roomRef.once('value',snap=>{
+      const room=snap.val();if(!room)return;
+      if(room.status==='playing'&&room.gameState){
+        const np=room.NP||MP.NP||3;NP=np;MP.NP=np;
+        if(room.players){
+          const rp=room.players;MP.players=[];
+          for(let i=0;i<np;i++)MP.players[i]=rp[i]||{name:'',ai:false};
+          for(let i=0;i<np;i++){if(MP.players[i]&&MP.players[i].name===MP.myName&&!MP.players[i].ai){MP.myIdx=i;ME=i;break;}}
+        }
+        G=mpFixArrays(room.gameState);
+        render();
+        // Modals bei Bedarf
+        if(G.phase==='roundEnd')showRoundEnd();
+        else if(G.phase==='buyIn')showBuyIn();
+        else if(G.phase==='gameOver')showGameOver();
+      }
+    });
+  } else {
+    render();
   }
-  render();
 }
 
 // ═══════════════════════════════════════════
