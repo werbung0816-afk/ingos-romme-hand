@@ -1074,7 +1074,7 @@ const ALL_AI=['Ingo','Dani','Holly','Julia','Joschi'];
 function mkDeck(){
   let id=0,d=[];
   for(let x=0;x<2;x++) for(const s of SUITS) for(const r of RANKS) d.push({id:id++,s,r,j:false});
-  for(let i=0;i<3;i++) d.push({id:id++,s:'★',r:'★',j:true});
+  for(let i=0;i<6;i++) d.push({id:id++,s:'★',r:'★',j:true});
   return d;
 }
 function shuf(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];}return b;}
@@ -1241,7 +1241,6 @@ function init(names){
 
 // ── AI ─────────────────────────────────────────────────────
 function aiGoOut(p, hand, dp, disc){
-  // Find best card to discard so remaining 10 have pen=0
   let bestDiscard=null, bestPen=Infinity;
   for(const c of hand){
     const rem=hand.filter(x=>x.id!==c.id);
@@ -1255,9 +1254,12 @@ function aiGoOut(p, hand, dp, disc){
   disc.push(bestDiscard);
   const ns=[...G.scores];
   for(let i=0;i<NP;i++){if(!G.eliminated.includes(i)&&i!==p)ns[i]+=pen(G.hands[i]);}
+  // Hausregel: einfarbig + alle Karten passen → 20 Punkte Bonus (min. -20)
+  const colorSlam=isSingleSuit(rem)&&pen(rem)===0;
+  if(colorSlam)ns[p]=Math.max(-20,ns[p]-20);
   G={...G,hands:G.hands.map((h,i)=>i===p?rem:h),
-    drawPile:dp,discardPile:disc,scores:ns,phase:'roundEnd',
-    roundWinner:p,message:`${G.playerNames[p]} ist fertig!`};
+    drawPile:dp,discardPile:disc,scores:ns,phase:'roundEnd',colorSlam,
+    roundWinner:p,message:colorSlam?`🌈 ${G.playerNames[p]} — Einfarbig! −20 Punkte!`:`${G.playerNames[p]} ist fertig!`};
   render();showRoundEnd();
   return true;
 }
@@ -1433,9 +1435,12 @@ function doGoOutFinal(cardId){
   const disc=[...G.discardPile,c];
   const ns=[...G.scores];
   for(let i=0;i<NP;i++){if(!G.eliminated.includes(i)&&i!==ME)ns[i]+=pen(G.hands[i]);}
+  // Hausregel: einfarbig + alle Karten passen → 20 Punkte Bonus (min. -20)
+  const colorSlam=isSingleSuit(rem)&&pen(rem)===0;
+  if(colorSlam)ns[ME]=Math.max(-20,ns[ME]-20);
   playRoundWin();G={...G,hands:G.hands.map((x,i)=>i===ME?rem:x),
-    discardPile:disc,scores:ns,phase:'roundEnd',roundWinner:ME,
-    mustDiscard:false,message:'🎉 '+G.playerNames[ME]+' ist fertig!'};
+    discardPile:disc,scores:ns,phase:'roundEnd',roundWinner:ME,colorSlam,
+    mustDiscard:false,message:colorSlam?'🌈 '+G.playerNames[ME]+' — Einfarbig! −20 Punkte!':'🎉 '+G.playerNames[ME]+' ist fertig!'};
   render();showRoundEnd();
   if(MP.on)MP.push();
 }
@@ -1469,33 +1474,38 @@ function showFertigModal(arr){
 }
 
 function showRoundEnd(){
-  // Button-Text je nach Rolle
   const btn=document.getElementById('btn-next-round');
-  if(btn){
-    btn.textContent=MP.on&&!MP.host?'Verstanden →':'Nächste Runde →';
-  }
+  if(btn){btn.textContent=MP.on&&!MP.host?'Verstanden →':'Nächste Runde →';}
   launchConfetti(false);
   const title=document.getElementById('round-title');
-  title.textContent=G.roundWinner===ME?'🎉 '+G.playerNames[ME]+' ist fertig!':G.playerNames[G.roundWinner]+' ist fertig!';
+  if(G.colorSlam){
+    title.innerHTML=`🌈 <span style="color:var(--gold)">${G.playerNames[G.roundWinner]} — Einfarbig!</span>`;
+  } else {
+    title.textContent=G.roundWinner===ME?'🎉 '+G.playerNames[ME]+' ist fertig!':G.playerNames[G.roundWinner]+' ist fertig!';
+  }
   const res=document.getElementById('round-results');
   res.innerHTML='';
   G.playerNames.forEach((name,i)=>{
-    if(!name&&name!==0)return; // skip undefined slots
+    if(!name&&name!==0)return;
     if(G.eliminated.includes(i))return;
-    const p2=i===G.roundWinner?0:pen(G.hands[i]);
+    const isWinner=i===G.roundWinner;
+    const p2=isWinner?0:pen(G.hands[i]);
     const hand=G.hands[i]||[];
     const arr=bestArr(hand);
     const sortedCards=[...arr.melds.flat(),...arr.leftovers];
-    // Show cards for ALL players including winner
     const cardsHtml=sortedCards.length
       ?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${sortedCards.map(c=>renderCard(c,'sm')).join('')}</div>`:'';
+    const winnerLabel=G.colorSlam&&isWinner
+      ?'🌈 Einfarbig −20 Pkt'
+      :isWinner?'Gewinner ✓':`+${p2} Strafpunkte`;
+    const winnerColor=isWinner?'#2ecc71':'#e74c3c';
     const div=document.createElement('div');div.className='res-row';
     div.style.cssText='flex-direction:column;align-items:flex-start;';
     div.innerHTML=`
       <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
-        <span style="font-weight:600;color:${i===G.roundWinner?'#2ecc71':'#e8e0d0'}">${name}</span>
-        <span style="color:${i===G.roundWinner?'#2ecc71':'#e74c3c'};font-size:13px">${i===G.roundWinner?'Gewinner ✓':`+${p2} Strafpunkte`}</span>
-        <span style="color:${G.scores[i]>=MAX?'#e74c3c':'var(--gold)'};font-weight:700">${G.scores[i]}<span style="color:#555;font-size:11px"> / ${MAX}</span></span>
+        <span style="font-weight:600;color:${isWinner?'#2ecc71':'#e8e0d0'}">${name}</span>
+        <span style="color:${winnerColor};font-size:13px">${winnerLabel}</span>
+        <span style="color:${G.scores[i]>=MAX?'#e74c3c':G.scores[i]<0?'#2ecc71':'var(--gold)'};font-weight:700">${G.scores[i]}<span style="color:#555;font-size:11px"> / ${MAX}</span></span>
       </div>${cardsHtml}`;
     res.appendChild(div);
   });
