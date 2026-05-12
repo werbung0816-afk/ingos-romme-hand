@@ -2200,7 +2200,7 @@ function startRoomStatusWatcher(){
       badge.textContent='Spiel l\u00E4uft \u2014 Runde '+round;
       badge.style.borderColor='rgba(241,196,15,.3)';
       if(countRow)countRow.style.display='none';
-      if(btn)btn.textContent='ALS ZUSCHAUER \u2192';
+      if(btn)btn.textContent='MITSPIELEN \u2192';
     }
   });
 }
@@ -2267,20 +2267,41 @@ async function mpConnect_asPlayer(name,db,room){
 }
 
 async function mpConnect_asSpectator(name,db,room){
-  MP.myName=name;MP.host=false;MP.on=true;
-  MP.spectator=true;MP.myIdx=-1;ME=-1;
+  MP.myName=name;MP.on=true;
+  MP.roomRef=MP.roomRef||db.ref('rooms/'+ROOM_KEY);
+
+  // KI-Slot verfügbar? → direkt als Spieler einsteigen
+  if(room.status==='playing'&&room.gameState){
+    const raw=mpFixArrays(room.gameState);
+    if(raw&&raw.players){
+      const aiSlot=raw.players.findIndex(p=>p&&p.ai);
+      if(aiSlot>=0){
+        MP.host=false;MP.myIdx=aiSlot;ME=aiSlot;MP.spectator=false;
+        raw.players[aiSlot]={name,ai:false};
+        raw.ts=Date.now();
+        G=raw;NP=raw.NP||3;
+        await MP.roomRef.update({gameState:raw});
+        try{sessionStorage.setItem('romme_session',JSON.stringify({slot:aiSlot,name}));}catch(e){}
+        document.getElementById('screen-lobby').classList.remove('active');
+        document.getElementById('screen-game').style.display='block';
+        render();MP.listen();initChat();
+        return;
+      }
+    }
+  }
+
+  // Kein KI-Slot → als Zuschauer
+  MP.host=false;MP.spectator=true;MP.myIdx=-1;ME=-1;
   const specRef=MP.roomRef.child('spectators').push();
   await specRef.set({name,ts:Date.now()});
   specRef.onDisconnect().remove();
   MP._specRef=specRef;
-  if(room.status==='playing'&&room.state){
-    try{const raw=mpFixArrays(room.state);if(raw){G=raw;NP=raw.NP||3;}}catch(e){}
+  if(room.status==='playing'&&room.gameState){
+    try{const raw=mpFixArrays(room.gameState);if(raw){G=raw;NP=raw.NP||3;}}catch(e){}
     document.getElementById('screen-lobby').classList.remove('active');
     document.getElementById('screen-game').style.display='block';
     render();MP.listen();initChat();
-    setTimeout(()=>{
-      const c=document.getElementById('spectator-controls');if(c)c.style.display='block';
-    },300);
+    setTimeout(()=>{const c=document.getElementById('spectator-controls');if(c)c.style.display='block';},300);
   } else {
     mpShowWaiting();MP.listen();initWaitChat();
   }
