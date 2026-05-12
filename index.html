@@ -474,6 +474,7 @@ header{
   to{opacity:1;transform:none;}
 }
 @keyframes grandSlam{
+@keyframes specBlink{0%,100%{opacity:1}50%{opacity:.35}}
   0%{transform:scale(.5);opacity:0;}
   60%{transform:scale(1.15);}
   100%{transform:scale(1);opacity:1;}
@@ -2268,34 +2269,8 @@ async function mpConnect_asPlayer(name,db,room){
 }
 
 async function mpConnect_asSpectator(name,db,room){
-  MP.myName=name;MP.on=true;
-  MP.roomRef=MP.roomRef||db.ref('rooms/'+ROOM_KEY);
-
-  // KI-Slot verfügbar? → direkt als Spieler einsteigen
-  if(room.status==='playing'&&room.gameState){
-    const raw=mpFixArrays(room.gameState);
-    if(raw&&raw.players){
-      const aiSlot=raw.players.findIndex(p=>p&&p.ai);
-      if(aiSlot>=0){
-        MP.host=false;MP.myIdx=aiSlot;ME=aiSlot;MP.spectator=false;
-        raw.players[aiSlot]={name,ai:false};
-        raw.ts=Date.now();
-        G=raw;NP=raw.NP||3;
-        await MP.roomRef.update({gameState:raw});
-        try{sessionStorage.setItem('romme_session',JSON.stringify({slot:aiSlot,name}));}catch(e){}
-        document.getElementById('screen-lobby').classList.remove('active');
-        document.getElementById('screen-game').style.display='block';
-        // Hand-Animation zurücksetzen damit Karten sichtbar werden
-        if(typeof handOrder!=='undefined')handOrder=null;
-        const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
-        render();MP.listen();initChat();
-        return;
-      }
-    }
-  }
-
-  // Kein KI-Slot → als Zuschauer
-  MP.host=false;MP.spectator=true;MP.myIdx=-1;ME=-1;
+  MP.myName=name;MP.host=false;MP.on=true;
+  MP.spectator=true;MP.myIdx=-1;ME=-1;
   const specRef=MP.roomRef.child('spectators').push();
   await specRef.set({name,ts:Date.now()});
   specRef.onDisconnect().remove();
@@ -2304,8 +2279,9 @@ async function mpConnect_asSpectator(name,db,room){
     try{const raw=mpFixArrays(room.gameState);if(raw){G=raw;NP=raw.NP||3;}}catch(e){}
     document.getElementById('screen-lobby').classList.remove('active');
     document.getElementById('screen-game').style.display='block';
+    if(typeof handOrder!=='undefined')handOrder=null;
+    const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
     render();MP.listen();initChat();
-    setTimeout(()=>{const c=document.getElementById('spectator-controls');if(c)c.style.display='block';},300);
   } else {
     mpShowWaiting();MP.listen();initWaitChat();
   }
@@ -2362,14 +2338,48 @@ async function spectatorWantPlay(){
 }
 
 function _updateSpectatorBar(spectators){
-  const specs=spectators?Object.values(spectators).map(s=>s.name||'?').filter(Boolean):[];
+  const specEntries=spectators?Object.entries(spectators).map(([k,s])=>({key:k,name:s.name||'?'})).filter(s=>s.name):[];
+  const specs=specEntries.map(s=>s.name);
+
+  // Spiel-Screen Bar
   const bar=document.getElementById('spectator-bar');
-  if(bar){bar.style.display=specs.length>0?'block':'none';
-    if(specs.length>0)bar.textContent='\uD83D\uDC41 Zuschauer: '+specs.join(', ');}
+  if(bar){
+    if(specs.length>0){
+      bar.style.display='block';
+      if(MP.host){
+        // Host: klickbare blinkende Buttons
+        bar.innerHTML='&#128065; Mitspielen? '+specEntries.map(s=>
+          `<button onclick="hostAddSpectator('${s.name.replace(/'/g,"\\'")}','${s.key}')"
+            style="font-weight:700;color:var(--gold);background:rgba(212,175,55,.15);
+            border:1px solid rgba(212,175,55,.5);border-radius:6px;padding:3px 10px;
+            cursor:pointer;font-size:12px;animation:specBlink 1s infinite;">${s.name} &#43;</button>`
+        ).join(' ');
+      } else {
+        bar.textContent='\uD83D\uDC41 Zuschauer: '+specs.join(', ');
+      }
+    } else {
+      bar.style.display='none';bar.innerHTML='';
+    }
+  }
+
+  // Warte-Screen
   const specBox=document.getElementById('wt-spectators-box');
   const specList=document.getElementById('wt-spectators');
   if(specBox&&specList){specBox.style.display=specs.length>0?'block':'none';
     specList.textContent=specs.join(', ');}
+}
+
+// Host fügt Zuschauer als Spieler hinzu
+async function hostAddSpectator(name,specKey){
+  if(!MP.host||!G||!G.players)return;
+  const aiSlot=G.players.findIndex(p=>p&&p.ai);
+  if(aiSlot<0){alert('Kein freier KI-Slot vorhanden.');return;}
+  G.players[aiSlot]={name,ai:false};
+  G.ts=Date.now();
+  MP.players=G.players.map(p=>({...p}));
+  clearTimeout(aiTimer);
+  await MP.roomRef.child('spectators/'+specKey).remove();
+  MP.push();render();
 }
 
 // Alias für Abwärtskompatibilität
