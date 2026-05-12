@@ -2300,6 +2300,30 @@ async function mpConnect_asPlayer(name,db,room){
   rp[slot]={name,ai:false};MP.players=rp;
   await MP.roomRef.child('players').set(rp);
   mpShowWaiting();MP.listen();initWaitChat();
+  // Fallback: poll every second for game start (in case listener misses it)
+  const _poll=setInterval(async()=>{
+    if(document.getElementById('screen-game').style.display==='block'){clearInterval(_poll);return;}
+    try{
+      const snap=await MP.roomRef.once('value');
+      const r=snap.val();
+      if(r&&r.status==='playing'&&r.gameState){
+        clearInterval(_poll);
+        const raw=mpFixArrays(r.gameState);
+        if(raw){
+          G=raw;NP=raw.playerNames?raw.playerNames.length:3;
+          if(r.players){const rp2=fixArr(r.players);MP.players=rp2;
+            rp2.forEach((p,i)=>{if(p&&p.name===MP.myName&&!p.ai){MP.myIdx=i;ME=i;}});
+          }
+          document.getElementById('screen-waiting').classList.remove('active');
+          document.getElementById('screen-game').style.display='block';
+          handOrder=null;const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
+          render();initGameChat();
+        }
+      }
+    }catch(e){console.warn('poll:',e);}
+  },1000);
+  // Stop polling after 60 seconds
+  setTimeout(()=>clearInterval(_poll),60000);
 }
 
 async function mpConnect_asSpectator(name,db,room){
