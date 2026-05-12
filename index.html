@@ -2351,12 +2351,14 @@ async function _integrateSpectators(callback){
     if(specs){
       for(const [key,s] of Object.entries(specs)){
         if(!s.wantToPlay||!s.name)continue;
-        const aiSlot=G.players.findIndex(p=>p&&p.ai);
+        // G.players.ai nutzen; Fallback auf MP.players wenn ai-Flag fehlt
+        let aiSlot=G.players.findIndex(p=>p&&p.ai);
+        if(aiSlot<0) aiSlot=MP.players.findIndex(p=>p&&p.ai);
         if(aiSlot<0)break;
-        G.players[aiSlot]={name:s.name,ai:false};
+        G.players[aiSlot]={...G.players[aiSlot],name:s.name,ai:false};
+        MP.players[aiSlot]={...MP.players[aiSlot],name:s.name,ai:false};
         G.ts=Date.now();
         await MP.roomRef.child('spectators/'+key).remove();
-        // room.players auch updaten damit Listener MP.players korrekt setzt
         await MP.roomRef.child('players/'+aiSlot).update({name:s.name,ai:false});
       }
     }
