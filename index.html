@@ -804,6 +804,18 @@ header{
 </div>
 
 <div class="modal-bg" id="modal-gameover">
+<!-- SPECTATOR JOIN MODAL -->
+<div class="modal-bg" id="modal-spec-join" style="z-index:9999">
+  <div class="modal-box" style="text-align:center;max-width:320px">
+    <div style="font-size:32px;margin-bottom:8px">👋</div>
+    <div style="font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:8px">MITSPIELEN?</div>
+    <div id="spec-join-msg" style="font-size:14px;color:var(--text2);margin-bottom:20px"></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="btn-spec-yes" class="lb-prim" style="flex:1">Ja →</button>
+      <button id="btn-spec-no" class="lb-ghost" style="flex:1" onclick="closeModal('modal-spec-join')">Nein</button>
+    </div>
+  </div>
+</div>
   <div class="modal-box" style="text-align:center;">
     <div class="m-title" id="gameover-title">🏆 Spiel beendet</div>
     <div id="gameover-content" style="margin-bottom:20px;"></div>
@@ -2343,32 +2355,32 @@ function _updateSpectatorBar(spectators){
   const specEntries=spectators?Object.entries(spectators).map(([k,s])=>({key:k,name:s.name||'?'})).filter(s=>s.name):[];
   const specs=specEntries.map(s=>s.name);
 
-  // Spiel-Screen Bar
+  // Spiel-Screen Bar (für alle sichtbar)
   const bar=document.getElementById('spectator-bar');
   if(bar){
-    // Event-Delegation einmalig setzen (überlebt innerHTML-Ersatz)
-    if(!bar._delegated){
-      bar._delegated=true;
-      bar.addEventListener('click',e=>{
-        const btn=e.target.closest('.spec-join-btn');
-        if(btn)hostAddSpectator(btn.dataset.name,btn.dataset.key);
-      });
-    }
     if(specs.length>0){
       bar.style.display='block';
-      if(MP.host){
-        bar.innerHTML='&#128065; Mitspielen? '+specEntries.map(s=>
-          `<button class="spec-join-btn" data-name="${s.name}" data-key="${s.key}"
-            style="font-weight:700;color:var(--gold);background:rgba(212,175,55,.15);
-            border:1px solid rgba(212,175,55,.5);border-radius:6px;padding:3px 10px;
-            cursor:pointer;font-size:12px;animation:specBlink 1s infinite;">${s.name} +</button>`
-        ).join(' ');
-      } else {
-        bar.textContent='\uD83D\uDC41 Zuschauer: '+specs.join(', ');
-      }
+      bar.textContent='\uD83D\uDC41 Zuschauer: '+specs.join(', ');
     } else {
-      bar.style.display='none';bar.innerHTML='';
+      bar.style.display='none';
     }
+  }
+
+  // Host: Modal für jeden neuen Zuschauer zeigen
+  if(MP.host&&specEntries.length>0){
+    const modal=document.getElementById('modal-spec-join');
+    if(modal&&!modal.classList.contains('open')){
+      const s=specEntries[0];
+      const msg=document.getElementById('spec-join-msg');
+      if(msg)msg.textContent=s.name+' möchte mitspielen — KI ersetzen?';
+      const btn=document.getElementById('btn-spec-yes');
+      if(btn){
+        btn.onclick=()=>{closeModal('modal-spec-join');hostAddSpectator(s.name,s.key);};
+      }
+      openModal('modal-spec-join');
+    }
+  } else if(specEntries.length===0){
+    closeModal('modal-spec-join');
   }
 
   // Warte-Screen
