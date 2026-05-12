@@ -2283,6 +2283,9 @@ async function mpConnect_asSpectator(name,db,room){
         try{sessionStorage.setItem('romme_session',JSON.stringify({slot:aiSlot,name}));}catch(e){}
         document.getElementById('screen-lobby').classList.remove('active');
         document.getElementById('screen-game').style.display='block';
+        // Hand-Animation zurücksetzen damit Karten sichtbar werden
+        if(typeof handOrder!=='undefined')handOrder=null;
+        const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
         render();MP.listen();initChat();
         return;
       }
