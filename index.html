@@ -921,6 +921,8 @@ const MP={
             }
           }
           if(MP.host){
+            // MP.players mit G.players synchronisieren (verhindert KI-Neustart nach Übernahme)
+            if(G.players)MP.players=G.players.map(p=>({...p}));
             const specs=room.spectators?Object.values(room.spectators):[];
             if(specs.some(s=>s&&s.wantToPlay))
               _integrateSpectators(()=>{if(MP.on)MP.push();render();MP.schedAI();});
