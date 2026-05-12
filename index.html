@@ -2262,6 +2262,25 @@ async function mpConnect(){
   const snap=await MP.roomRef.once('value');
   const room=snap.val();
   if(!room) return mpConnect_asHost(name,db);
+
+  // Zurückkehrender Host?
+  if(room.hostName===name){
+    MP.myName=name;MP.host=true;MP.myIdx=0;ME=0;
+    MP.NP=room.NP||3;NP=MP.NP;MP.spectator=false;MP.on=true;
+    if(room.status==='waiting'){
+      mpShowWaiting();MP.listen();initWaitChat();
+      const bs=document.getElementById('btn-start');if(bs)bs.style.display='block';
+    } else {
+      try{const raw=mpFixArrays(room.gameState);if(raw){G=raw;NP=raw.NP||3;}}catch(e){}
+      document.getElementById('screen-lobby').classList.remove('active');
+      document.getElementById('screen-game').style.display='block';
+      if(typeof handOrder!=='undefined')handOrder=null;
+      const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
+      render();MP.listen();initChat();
+    }
+    return;
+  }
+
   if(room.status==='waiting') return mpConnect_asPlayer(name,db,room);
   return mpConnect_asSpectator(name,db,room);
 }
@@ -2283,10 +2302,23 @@ async function mpConnect_asPlayer(name,db,room){
   const rp=room.players||{};
   const players=[];
   for(let i=0;i<np;i++)players[i]=rp[i]||{name:'',ai:false,empty:true};
-  const slot=players.findIndex((p,i)=>i>0&&(!p||p.empty||!p.name));
+
+  // Bereits im Raum? → alten Slot wiederherstellen
+  const existingSlot=players.findIndex(p=>p&&p.name===name&&!p.ai);
+  if(existingSlot>=0){
+    MP.myName=name;MP.host=(existingSlot===0);MP.myIdx=existingSlot;
+    MP.NP=np;NP=np;ME=existingSlot;MP.spectator=false;MP.on=true;
+    if(MP.host)MP.roomRef.onDisconnect().remove();
+    mpShowWaiting();MP.listen();initWaitChat();
+    if(MP.host){const bs=document.getElementById('btn-start');if(bs)bs.style.display='block';}
+    return;
+  }
+
+  // Freien Slot suchen (auch Slot 0 falls leer)
+  const slot=players.findIndex((p,i)=>!p||p.empty||!p.name);
   if(slot<0)return mpConnect_asSpectator(name,db,room);
-  MP.myName=name;MP.host=false;MP.myIdx=slot;MP.NP=np;NP=np;ME=slot;
-  MP.spectator=false;MP.on=true;
+  MP.myName=name;MP.myIdx=slot;ME=slot;MP.host=(slot===0);
+  MP.NP=np;NP=np;MP.spectator=false;MP.on=true;
   players[slot]={name,ai:false};MP.players=players;
   await MP.roomRef.child('players').set(players);
   try{sessionStorage.setItem('romme_session',JSON.stringify({slot,name}));}catch(e){}
