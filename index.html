@@ -892,52 +892,47 @@ const MP={
         const np=room.NP||MP.NP||3;NP=np;MP.NP=np;MP.on=true;
         if(room.players){
           const rp=fixArr(room.players);
-          MP.players=rp.length?rp:MP.players;NP=MP.players.length;
+          MP.players=[];
+          for(let i=0;i<np;i++){MP.players[i]=rp[i]||{name:'',ai:false};}
           if(!MP.host){
-            MP.players.forEach((p,i)=>{if(p&&p.name===MP.myName&&!p.ai){MP.myIdx=i;ME=i;}});
+            for(let i=0;i<np;i++){
+              if(MP.players[i]&&MP.players[i].name===MP.myName&&!MP.players[i].ai){MP.myIdx=i;ME=i;break;}
+            }
           }
         }
-        const raw=mpFixArrays(room.gameState);
-        if(!raw){console.error('raw gameState is null');return;}
-        console.log('Listener: phase=',raw.phase,'G=',!!G,'ME=',ME,'host=',MP.host);
+        const raw=room.gameState;
         if(!G||raw.ts>=(G.ts||0)){
-          try{
           const oldPhase=G?G.phase:null;
-          G=raw;
+          G=mpFixArrays(raw);
 
           // Zuschauer: bin ich jetzt als Spieler eingetragen?
-          if(MP.spectator&&MP.myName&&G.players){
-            const newIdx=G.players.findIndex(p=>p&&p.name===MP.myName&&!p.ai);
+          if(MP.spectator&&MP.myName&&G.playerNames){
+            const newIdx=G.playerNames.findIndex((n,i)=>n===MP.myName&&MP.players[i]&&!MP.players[i].ai);
             if(newIdx>=0){
               MP.spectator=false;MP.myIdx=newIdx;ME=newIdx;
               if(MP._specRef)try{MP._specRef.remove();}catch(e){}
               const b=document.getElementById('spectator-badge');if(b)b.remove();
               const c=document.getElementById('spectator-controls');if(c)c.style.display='none';
-              handOrder=null;
-              const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
+              handOrder=null;const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
             }
           }
-          // Host: KI-Timer canceln wenn Spieler übernommen hat
-          if(MP.host&&G.players){
+          // Host: KI-Timer canceln
+          if(MP.host&&G.playerNames){
             const cur=Number(G.currentPlayer);
-            if(cur>=0&&G.players[cur]&&!G.players[cur].ai){clearTimeout(aiTimer);}
+            if(cur>=0&&MP.players[cur]&&!MP.players[cur].ai){clearTimeout(aiTimer);}
           }
 
           if(document.getElementById('screen-game').style.display!=='block'){
-            console.log('Switching to game screen for',MP.myName,'(host=',MP.host,')');
             document.getElementById('screen-waiting').classList.remove('active');
             document.getElementById('screen-lobby').classList.remove('active');
             document.getElementById('screen-game').style.display='block';
             initGameChat();
-            handOrder=null;
-            const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
+            handOrder=null;const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
           }
-          render();
-          // Zuschauer-Controls
           const specCtrl=document.getElementById('spectator-controls');
           if(specCtrl)specCtrl.style.display=(MP.on&&MP.spectator)?'block':'none';
+          render();
 
-          // Phase handling (same as before)
           const roundModal=document.getElementById('modal-round');
           const buyModal=document.getElementById('modal-buyin');
           const roundOpen=roundModal&&roundModal.classList.contains('open');
@@ -946,24 +941,20 @@ const MP={
             if(G.phase!==oldPhase||!roundOpen)showRoundEnd();
           } else if(G.phase==='buyIn'){
             if(MP.host&&G.buyInPending&&G.buyInPending.length>0){
-              G.buyInPending.filter(pi2=>MP.players[pi2]&&MP.players[pi2].ai).forEach(pi2=>{
+              G.buyInPending.filter((pi2)=>MP.players[pi2]&&MP.players[pi2].ai).forEach(pi2=>{
                 setTimeout(()=>doBuyIn(pi2,true),5000);
               });
             }
             if(MP.host&&G.buyInPending&&G.buyInPending.length===0){
-              const ns=G.scores;const ne=G.eliminated;const nc=G.contributions;const newTotal=G.totalPot;
+              const ns=G.scores,ne=G.eliminated,nc=G.contributions,newTotal=G.totalPot;
               const active=[...Array(NP).keys()].filter(i=>!ne.includes(i));
               const underMax=active.filter(i=>ns[i]<MAX);
               if(active.length<=1||underMax.length<=1){G={...G,phase:'gameOver'};showGameOver();MP.push();}
               else{
                 G=deal(ns,G.round+1,ne,G.playerNames,nc,newTotal);
-                // ai-Flag wiederherstellen
-                MP.players.forEach((p,i)=>{if(G.players&&G.players[i])G.players[i].ai=p.ai;});
-                handOrder=null;
-                const fp2=G.currentPlayer;
-                G.message=G.mustDiscard
-                  ?(G.playerNames[fp2]+' hat 11 Karten'+(fp2===ME?' — leg ab oder drueck FERTIG!':''))
-                  :(fp2===ME?(G.playerNames[ME]+', dein Zug — Karte ziehen!'):(G.playerNames[fp2]+' denkt...'));
+                MP.players.forEach((p,i)=>{if(G.playerNames&&G.playerNames[i]){}});
+                handOrder=null;const fp2=G.currentPlayer;
+                G.message=fp2===ME?(G.playerNames[ME]+', dein Zug \u2014 Karte ziehen!'):(G.playerNames[fp2]+' denkt...');
                 const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
                 closeModal('modal-buyin');render();scheduleAI();MP.push();MP.schedAI();
               }
@@ -971,27 +962,16 @@ const MP={
           } else if(G.phase==='gameOver'&&G.phase!==oldPhase){showGameOver();}
           else if(G.phase==='playing'&&G.phase!==oldPhase){
             const nrBtn=document.getElementById('btn-next-round');
-            if(nrBtn){nrBtn.disabled=false;nrBtn.textContent='Nächste Runde →';}
+            if(nrBtn){nrBtn.disabled=false;nrBtn.textContent='N\u00E4chste Runde \u2192';}
             closeModal('modal-round');closeModal('modal-buyin');
-            handOrder=null;
-            const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
+            handOrder=null;const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
           }
-
           if(MP.host){
-            // MP.players mit G.players synchronisieren
-            if(G.players)MP.players=G.players.map(p=>({...p}));
-            // KI-Übernahme durch Zuschauer (wantToPlay)
             const specs=room.spectators?Object.values(room.spectators):[];
             if(specs.some(s=>s&&s.wantToPlay)){
-              _integrateSpectators(()=>{MP.players=G.players.map(p=>({...p}));if(MP.on)MP.push();render();MP.schedAI();});
+              _integrateSpectators(()=>{MP.players=G.playerNames?G.playerNames.map((n,i)=>({name:n,ai:MP.players[i]?MP.players[i].ai:true})):MP.players;if(MP.on)MP.push();render();MP.schedAI();});
             }
             if(G.phase==='playing')this.schedAI();
-          }
-          }catch(err){
-            console.error('Listener render error:',err);
-            // Trotzdem Game-Screen zeigen
-            document.getElementById('screen-waiting').classList.remove('active');
-            document.getElementById('screen-game').style.display='block';
           }
         }
       }
