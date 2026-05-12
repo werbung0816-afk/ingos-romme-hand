@@ -811,18 +811,6 @@ header{
   </div>
 </div>
 
-<!-- Zuschauer möchte mitspielen — Host-Bestätigung -->
-<div class="modal-bg" id="modal-spec-join">
-  <div class="modal-box" style="text-align:center;">
-    <div style="font-size:32px;margin-bottom:8px">👋</div>
-    <div style="font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:8px">MITSPIELEN?</div>
-    <div id="spec-join-msg" style="font-size:14px;color:var(--text2);margin-bottom:20px"></div>
-    <div style="display:flex;gap:10px;justify-content:center">
-      <button id="btn-spec-yes" class="btn-gold" style="flex:1">Ja, KI ersetzen →</button>
-      <button class="lb-ghost" style="flex:1" onclick="closeModal('modal-spec-join')">Nein</button>
-    </div>
-  </div>
-</div>
 
 <script>
 'use strict';
@@ -887,11 +875,6 @@ const MP={
 
   listen(){
     if(!this.roomRef)return;
-    // Dedizierter Zuschauer-Listener
-    if(this._specListener){try{this.roomRef.child('spectators').off('value',this._specListener);}catch(e){}}
-    this._specListener=this.roomRef.child('spectators').on('value',snap=>{
-      _updateSpectatorBar(snap.val());
-    });
     this._listener=this.roomRef.on('value',snap=>{
       const room=snap.val();if(!room)return;
       if(room.status==='waiting'){
@@ -933,8 +916,10 @@ const MP={
           const oldPhase=G?G.phase:null;
           G=mpFixArrays(raw);
 
-          // Zuschauer: spectator detection + wantToPlay handling
+          // Zuschauer-Bar aktualisieren
           _updateSpectatorBar(room.spectators);
+
+          // Zuschauer: bin ich jetzt als Spieler eingetragen?
           if(MP.spectator&&MP.myName&&G.players){
             const newIdx=G.players.findIndex(p=>p&&p.name===MP.myName&&!p.ai);
             if(newIdx>=0){
@@ -945,18 +930,23 @@ const MP={
               const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
             }
           }
+
           if(MP.host){
-            // MP.players mit G.players synchronisieren (verhindert KI-Neustart nach Übernahme)
+            // MP.players mit G.players synchronisieren
             if(G.players)MP.players=G.players.map(p=>({...p}));
+            // Sofortige KI-Übernahme durch Zuschauer (wantToPlay)
             const specs=room.spectators?Object.values(room.spectators):[];
-            if(specs.some(s=>s&&s.wantToPlay))
+            if(specs.some(s=>s&&s.wantToPlay)){
               _integrateSpectators(()=>{if(MP.on)MP.push();render();MP.schedAI();});
+            }
+            // KI-Timer canceln wenn aktueller Spieler kein KI mehr
+            const cur=G.currentPlayer;
+            if(cur>=0&&G.players&&G.players[cur]&&!G.players[cur].ai)clearTimeout(aiTimer);
+            // Spieler die gegangen sind → KI übernimmt
             if(room.players){
               const rp=Object.values(room.players);
               rp.forEach((p,i)=>{if(p&&p.leftGame&&p.ai&&G.players&&G.players[i]&&!G.players[i].ai)G.players[i].ai=true;});
             }
-            const cur=G.currentTurn??G.currentPlayer;
-            if(cur>=0&&G.players&&G.players[cur]&&!G.players[cur].ai)clearTimeout(aiTimer);
           }
 
           if(document.getElementById('screen-game').style.display!=='block'){
@@ -2395,74 +2385,15 @@ async function spectatorWantPlay(){
 }
 
 function _updateSpectatorBar(spectators){
-  const specEntries=spectators?Object.entries(spectators).map(([k,s])=>({key:k,name:s.name||'?'})).filter(s=>s.name):[];
-  const specs=specEntries.map(s=>s.name);
-
-  // Spiel-Screen Bar (für alle sichtbar)
+  const specs=spectators?Object.values(spectators).map(s=>s.name||'?').filter(Boolean):[];
   const bar=document.getElementById('spectator-bar');
   if(bar){
-    if(specs.length>0){
-      bar.style.display='block';
-      bar.textContent='\uD83D\uDC41 Zuschauer: '+specs.join(', ');
-    } else {
-      bar.style.display='none';
-    }
+    if(specs.length>0){bar.style.display='block';bar.textContent='\uD83D\uDC41 Zuschauer: '+specs.join(', ');}
+    else{bar.style.display='none';}
   }
-
-  // Host: Modal für jeden neuen Zuschauer zeigen
-  if(MP.host&&specEntries.length>0&&!MP._specJoinPending){
-    const modal=document.getElementById('modal-spec-join');
-    if(modal&&!modal.classList.contains('open')){
-      const s=specEntries[0];
-      const msg=document.getElementById('spec-join-msg');
-      if(msg)msg.textContent=s.name+' möchte mitspielen — KI ersetzen?';
-      const btn=document.getElementById('btn-spec-yes');
-      if(btn){
-        btn.onclick=()=>{
-          MP._specJoinPending=true;
-          closeModal('modal-spec-join');
-          hostAddSpectator(s.name,s.key).finally(()=>{MP._specJoinPending=false;});
-        };
-      }
-      openModal('modal-spec-join');
-    }
-  } else if(specEntries.length===0){
-    closeModal('modal-spec-join');
-    MP._specJoinPending=false;
-  }
-
-  // Warte-Screen
   const specBox=document.getElementById('wt-spectators-box');
   const specList=document.getElementById('wt-spectators');
-  if(specBox&&specList){specBox.style.display=specs.length>0?'block':'none';
-    specList.textContent=specs.join(', ');}
-}
-
-// Host fügt Zuschauer als Spieler hinzu
-async function hostAddSpectator(name,specKey){
-  if(!MP.host||!G||!G.players){alert('Fehler: nicht Host oder kein Spiel');return;}
-  const aiSlot=G.players.findIndex(p=>p&&p.ai);
-  if(aiSlot<0){alert('Kein KI-Slot frei.');return;}
-
-  G.players[aiSlot]={name,ai:false};
-  G.ts=Date.now();
-  MP.players=G.players.map(p=>({...p}));
-  clearTimeout(aiTimer);
-
-  try{
-    // Zuschauer entfernen
-    await MP.roomRef.child('spectators/'+specKey).remove();
-    // gameState UND players gleichzeitig updaten
-    // (Listener liest room.players → muss auch aktualisiert werden)
-    await MP.roomRef.update({
-      gameState:JSON.parse(JSON.stringify(G)),
-      players:MP.players.map(p=>({name:p.name,ai:p.ai}))
-    });
-    render();
-  }catch(e){
-    alert('Fehler beim Hinzufügen: '+e.message);
-    MP._specJoinPending=false;
-  }
+  if(specBox&&specList){specBox.style.display=specs.length>0?'block':'none';specList.textContent=specs.join(', ');}
 }
 
 // Alias für Abwärtskompatibilität
