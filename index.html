@@ -937,7 +937,11 @@ const MP={
             // Sofortige KI-Übernahme durch Zuschauer (wantToPlay)
             const specs=room.spectators?Object.values(room.spectators):[];
             if(specs.some(s=>s&&s.wantToPlay)){
-              _integrateSpectators(()=>{if(MP.on)MP.push();render();MP.schedAI();});
+              _integrateSpectators(()=>{
+                MP.players=G.players.map(p=>({...p}));
+                if(MP.on)MP.push();
+                render();MP.schedAI();
+              });
             }
             // KI-Timer canceln wenn aktueller Spieler kein KI mehr
             const cur=G.currentPlayer;
@@ -1020,8 +1024,9 @@ const MP={
 
 function mpFixArrays(gs){
   if(!gs)return gs;
-  function fa(v){if(!v)return[];if(Array.isArray(v))return v;return Object.keys(v).sort((a,b)=>a-b).map(k=>v[k]);}
-  return{...gs,hands:fa(gs.hands).map(h=>fa(h)),drawPile:fa(gs.drawPile),discardPile:fa(gs.discardPile),eliminated:fa(gs.eliminated),buyInPending:fa(gs.buyInPending),validDiscardIds:fa(gs.validDiscardIds),scores:fa(gs.scores),playerNames:fa(gs.playerNames),contributions:fa(gs.contributions)};
+  function fa(v){if(!v)return[];if(Array.isArray(v))return v;return Object.keys(v).sort((a,b)=>+a-+b).map(k=>v[k]);}
+  const players=fa(gs.players);
+  return{...gs,players,hands:fa(gs.hands).map(h=>fa(h)),drawPile:fa(gs.drawPile),discardPile:fa(gs.discardPile),eliminated:fa(gs.eliminated),buyInPending:fa(gs.buyInPending),validDiscardIds:fa(gs.validDiscardIds),scores:fa(gs.scores),playerNames:fa(gs.playerNames),contributions:fa(gs.contributions)};
 }
 
 // ═══════════════════════════════════════════
@@ -2348,9 +2353,11 @@ async function _integrateSpectators(callback){
         if(!s.wantToPlay||!s.name)continue;
         const aiSlot=G.players.findIndex(p=>p&&p.ai);
         if(aiSlot<0)break;
-        G.players[aiSlot]={name:s.name,ai:false,lids:G.players[aiSlot].lids||0};
-        G.ts=Date.now(); // vor Remove setzen — blockiert Echo
+        G.players[aiSlot]={name:s.name,ai:false};
+        G.ts=Date.now();
         await MP.roomRef.child('spectators/'+key).remove();
+        // room.players auch updaten damit Listener MP.players korrekt setzt
+        await MP.roomRef.child('players/'+aiSlot).update({name:s.name,ai:false});
       }
     }
   }catch(e){console.warn('_integrateSpectators:',e);}
@@ -2463,6 +2470,8 @@ async function mpHostStart(){
     const names=players.map(p=>p.name);
     const contrib=Array(actualNP).fill(2);
     G=deal(Array(actualNP).fill(0),1,[],names,contrib,actualNP*2);
+    // ai-Flag aus players in G.players übertragen
+    players.forEach((p,i)=>{if(G.players&&G.players[i])G.players[i].ai=p.ai;});
     const fp=G.currentPlayer;
     G.message=G.mustDiscard
       ?(names[fp]+' hat 11 Karten'+(fp===0?' — leg ab oder drück FERTIG!':''))
