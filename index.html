@@ -919,6 +919,8 @@ const MP={
               MP.spectator=false;MP.myIdx=newIdx;ME=newIdx;
               if(MP._specRef)try{MP._specRef.remove();}catch(e){}
               const c=document.getElementById('spectator-controls');if(c)c.style.display='none';
+              if(typeof handOrder!=='undefined')handOrder=null;
+              const ce=document.getElementById('hand-cards');if(ce)ce._dealt=false;
             }
           }
           if(MP.host){
@@ -2347,13 +2349,15 @@ function _updateSpectatorBar(spectators){
     if(specs.length>0){
       bar.style.display='block';
       if(MP.host){
-        // Host: klickbare blinkende Buttons
         bar.innerHTML='&#128065; Mitspielen? '+specEntries.map(s=>
-          `<button onclick="hostAddSpectator('${s.name.replace(/'/g,"\\'")}','${s.key}')"
+          `<button class="spec-join-btn" data-name="${s.name}" data-key="${s.key}"
             style="font-weight:700;color:var(--gold);background:rgba(212,175,55,.15);
             border:1px solid rgba(212,175,55,.5);border-radius:6px;padding:3px 10px;
-            cursor:pointer;font-size:12px;animation:specBlink 1s infinite;">${s.name} &#43;</button>`
+            cursor:pointer;font-size:12px;animation:specBlink 1s infinite;">${s.name} +</button>`
         ).join(' ');
+        bar.querySelectorAll('.spec-join-btn').forEach(btn=>{
+          btn.addEventListener('click',()=>hostAddSpectator(btn.dataset.name,btn.dataset.key));
+        });
       } else {
         bar.textContent='\uD83D\uDC41 Zuschauer: '+specs.join(', ');
       }
