@@ -904,6 +904,10 @@ const MP={
         mpRenderWaiting(room);return;
       }
       if(room.status==='playing'&&room.gameState){
+        // Host-Status wiederherstellen falls Seite neu geladen wurde
+        if(!MP.host&&MP.myName&&room.hostName&&room.hostName===MP.myName){
+          MP.host=true;MP.myIdx=0;ME=0;MP.spectator=false;
+        }
         // Firebase kann Arrays in Objekte konvertieren — hier normalisieren
         const np=room.NP||MP.NP||3;
         NP=np;MP.NP=np;MP.on=true;
