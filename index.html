@@ -9,9 +9,9 @@
 <meta name="theme-color" content="#d4af37">
 <title>Ingo's Rommé Hand v3</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/firebase@10.8.1/firebase-app-compat.js"></script>
-<script src="https://unpkg.com/firebase@10.8.1/firebase-database-compat.js"></script>
-<script src="https://unpkg.com/firebase@10.8.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -614,7 +614,7 @@ header{
   <div id="room-status-badge" style="text-align:center;padding:10px 14px;border-radius:10px;
     background:rgba(0,0,0,.3);border:1px solid rgba(212,175,55,.15);margin-bottom:8px;
     font-size:13px;color:rgba(232,224,208,.7);min-height:38px;display:flex;align-items:center;justify-content:center;">
-    Verbinde&#8230;
+    Verbinde&#8230; <span style="font-size:9px;opacity:.4">v2.1</span>
   </div>
   <div style="text-align:right;margin-bottom:10px">
     <button onclick="resetRoom()" style="font-size:10px;color:rgba(212,175,55,.4);background:none;border:none;cursor:pointer;padding:2px 4px;letter-spacing:1px;">&#8635; Raum zur&#252;cksetzen</button>
@@ -851,7 +851,7 @@ function getDB(){
         .then(()=>{_authReady=true;_authCallbacks.forEach(fn=>fn());_authCallbacks=[];})
         .catch(e=>{console.warn('Auth:',e);_authReady=true;_authCallbacks.forEach(fn=>fn());_authCallbacks=[];});
     }
-    catch(e){alert('Firebase: '+e.message);return null;}
+    catch(e){console.error('Firebase init:',e);return null;}
   }
   return _db;
 }
@@ -1527,6 +1527,7 @@ function showRoundEnd(){
     title.textContent=G.roundWinner===ME?'🎉 '+G.playerNames[ME]+' ist fertig!':G.playerNames[G.roundWinner]+' ist fertig!';
   }}
   const res=document.getElementById('round-results');
+  if(!res)return;
   res.innerHTML='';
   G.playerNames.forEach((name,i)=>{
     if(!name&&name!==0)return;
@@ -1557,6 +1558,7 @@ function showRoundEnd(){
 
 function showBuyIn(){
   const content=document.getElementById('buyin-content');
+  if(!content)return;
   content.innerHTML='';
   const active=[...Array(NP).keys()].filter(i=>!G.eliminated.includes(i)&&G.playerNames[i]);
   const notBuying=active.filter(i=>!G.buyInPending.includes(i));
@@ -1619,7 +1621,8 @@ function showGameOver(){
   playGameWin();
   const active=[...Array(NP).keys()].filter(i=>!G.eliminated.includes(i)&&G.playerNames[i]);
   const winner=active.length?active.reduce((w,i)=>G.scores[i]<G.scores[w]?i:w,active[0]):0;
-  document.getElementById('gameover-title').textContent=`🏆 ${G.playerNames[winner]} gewinnt!`;
+  const _gt=document.getElementById('gameover-title');
+  if(_gt)_gt.textContent=`🏆 ${G.playerNames[winner]} gewinnt!`;
   const gc=document.getElementById('gameover-content');
   const contrib=G.contributions||Array(NP).fill(2);
   const total=G.totalPot||NP*2;
@@ -2151,6 +2154,12 @@ endRound=function(){
 // ═══════════════════════════════════════════
 // LOBBY UI
 // ═══════════════════════════════════════════
+// ── VERSION ── v2.1 (2025-05-12)
+window.onerror=function(msg,src,line,col,err){
+  console.error('GLOBAL ERROR:',msg,'at',src,line+':'+col,err);
+  return false; // don't suppress
+};
+
 // ── ROOM KEY ──────────────────────────────────────────────────────
 const ROOM_KEY='romme';
 let lbCount=3;
@@ -2185,7 +2194,7 @@ async function resetRoom(){
     await db.ref('rooms/'+ROOM_KEY).remove();
     const badge=document.getElementById('room-status-badge');
     if(badge)badge.textContent='Raum gel\u00F6scht \u2014 du kannst neu erstellen';
-  }catch(e){alert('Fehler: '+e.message);}
+  }catch(e){console.error('resetRoom:',e);}
 }
 
 // ── ROOM STATUS WATCHER ───────────────────────────────────────────
