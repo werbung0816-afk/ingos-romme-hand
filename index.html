@@ -2374,7 +2374,7 @@ function _updateSpectatorBar(spectators){
   }
 
   // Host: Modal für jeden neuen Zuschauer zeigen
-  if(MP.host&&specEntries.length>0){
+  if(MP.host&&specEntries.length>0&&!MP._specJoinPending){
     const modal=document.getElementById('modal-spec-join');
     if(modal&&!modal.classList.contains('open')){
       const s=specEntries[0];
@@ -2382,12 +2382,17 @@ function _updateSpectatorBar(spectators){
       if(msg)msg.textContent=s.name+' möchte mitspielen — KI ersetzen?';
       const btn=document.getElementById('btn-spec-yes');
       if(btn){
-        btn.onclick=()=>{closeModal('modal-spec-join');hostAddSpectator(s.name,s.key);};
+        btn.onclick=()=>{
+          MP._specJoinPending=true;
+          closeModal('modal-spec-join');
+          hostAddSpectator(s.name,s.key).finally(()=>{MP._specJoinPending=false;});
+        };
       }
       openModal('modal-spec-join');
     }
   } else if(specEntries.length===0){
     closeModal('modal-spec-join');
+    MP._specJoinPending=false;
   }
 
   // Warte-Screen
@@ -2399,15 +2404,29 @@ function _updateSpectatorBar(spectators){
 
 // Host fügt Zuschauer als Spieler hinzu
 async function hostAddSpectator(name,specKey){
-  if(!MP.host||!G||!G.players)return;
+  if(!MP.host||!G||!G.players){alert('Fehler: nicht Host oder kein Spiel');return;}
   const aiSlot=G.players.findIndex(p=>p&&p.ai);
-  if(aiSlot<0){alert('Kein freier KI-Slot vorhanden.');return;}
+  if(aiSlot<0){alert('Kein KI-Slot frei.');return;}
+
   G.players[aiSlot]={name,ai:false};
   G.ts=Date.now();
   MP.players=G.players.map(p=>({...p}));
   clearTimeout(aiTimer);
-  await MP.roomRef.child('spectators/'+specKey).remove();
-  MP.push();render();
+
+  try{
+    // Zuschauer entfernen
+    await MP.roomRef.child('spectators/'+specKey).remove();
+    // gameState UND players gleichzeitig updaten
+    // (Listener liest room.players → muss auch aktualisiert werden)
+    await MP.roomRef.update({
+      gameState:JSON.parse(JSON.stringify(G)),
+      players:MP.players.map(p=>({name:p.name,ai:p.ai}))
+    });
+    render();
+  }catch(e){
+    alert('Fehler beim Hinzufügen: '+e.message);
+    MP._specJoinPending=false;
+  }
 }
 
 // Alias für Abwärtskompatibilität
