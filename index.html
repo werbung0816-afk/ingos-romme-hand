@@ -898,6 +898,8 @@ const MP={
           }
         }
         const raw=mpFixArrays(room.gameState);
+        if(!raw){console.error('raw gameState is null');return;}
+        console.log('Listener: phase=',raw.phase,'G=',!!G,'ME=',ME,'host=',MP.host);
         if(!G||raw.ts>=(G.ts||0)){
           try{
           const oldPhase=G?G.phase:null;
@@ -922,6 +924,7 @@ const MP={
           }
 
           if(document.getElementById('screen-game').style.display!=='block'){
+            console.log('Switching to game screen for',MP.myName,'(host=',MP.host,')');
             document.getElementById('screen-waiting').classList.remove('active');
             document.getElementById('screen-lobby').classList.remove('active');
             document.getElementById('screen-game').style.display='block';
