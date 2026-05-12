@@ -2346,6 +2346,14 @@ function _updateSpectatorBar(spectators){
   // Spiel-Screen Bar
   const bar=document.getElementById('spectator-bar');
   if(bar){
+    // Event-Delegation einmalig setzen (überlebt innerHTML-Ersatz)
+    if(!bar._delegated){
+      bar._delegated=true;
+      bar.addEventListener('click',e=>{
+        const btn=e.target.closest('.spec-join-btn');
+        if(btn)hostAddSpectator(btn.dataset.name,btn.dataset.key);
+      });
+    }
     if(specs.length>0){
       bar.style.display='block';
       if(MP.host){
@@ -2355,9 +2363,6 @@ function _updateSpectatorBar(spectators){
             border:1px solid rgba(212,175,55,.5);border-radius:6px;padding:3px 10px;
             cursor:pointer;font-size:12px;animation:specBlink 1s infinite;">${s.name} +</button>`
         ).join(' ');
-        bar.querySelectorAll('.spec-join-btn').forEach(btn=>{
-          btn.addEventListener('click',()=>hostAddSpectator(btn.dataset.name,btn.dataset.key));
-        });
       } else {
         bar.textContent='\uD83D\uDC41 Zuschauer: '+specs.join(', ');
       }
