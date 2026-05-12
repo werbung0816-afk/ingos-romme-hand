@@ -804,22 +804,23 @@ header{
 </div>
 
 <div class="modal-bg" id="modal-gameover">
-<!-- SPECTATOR JOIN MODAL -->
-<div class="modal-bg" id="modal-spec-join" style="z-index:9999">
-  <div class="modal-box" style="text-align:center;max-width:320px">
-    <div style="font-size:32px;margin-bottom:8px">👋</div>
-    <div style="font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:8px">MITSPIELEN?</div>
-    <div id="spec-join-msg" style="font-size:14px;color:var(--text2);margin-bottom:20px"></div>
-    <div style="display:flex;gap:10px;justify-content:center">
-      <button id="btn-spec-yes" class="lb-prim" style="flex:1">Ja →</button>
-      <button id="btn-spec-no" class="lb-ghost" style="flex:1" onclick="closeModal('modal-spec-join')">Nein</button>
-    </div>
-  </div>
-</div>
   <div class="modal-box" style="text-align:center;">
     <div class="m-title" id="gameover-title">🏆 Spiel beendet</div>
     <div id="gameover-content" style="margin-bottom:20px;"></div>
     <button class="btn-gold" id="btn-new-game">Neues Spiel</button>
+  </div>
+</div>
+
+<!-- Zuschauer möchte mitspielen — Host-Bestätigung -->
+<div class="modal-bg" id="modal-spec-join">
+  <div class="modal-box" style="text-align:center;">
+    <div style="font-size:32px;margin-bottom:8px">👋</div>
+    <div style="font-family:'Cinzel',serif;font-size:16px;color:var(--gold);margin-bottom:8px">MITSPIELEN?</div>
+    <div id="spec-join-msg" style="font-size:14px;color:var(--text2);margin-bottom:20px"></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="btn-spec-yes" class="btn-gold" style="flex:1">Ja, KI ersetzen →</button>
+      <button class="lb-ghost" style="flex:1" onclick="closeModal('modal-spec-join')">Nein</button>
+    </div>
   </div>
 </div>
 
@@ -886,6 +887,11 @@ const MP={
 
   listen(){
     if(!this.roomRef)return;
+    // Dedizierter Zuschauer-Listener
+    if(this._specListener){try{this.roomRef.child('spectators').off('value',this._specListener);}catch(e){}}
+    this._specListener=this.roomRef.child('spectators').on('value',snap=>{
+      _updateSpectatorBar(snap.val());
+    });
     this._listener=this.roomRef.on('value',snap=>{
       const room=snap.val();if(!room)return;
       if(room.status==='waiting'){
@@ -1012,7 +1018,8 @@ const MP={
 
   stop(){
     if(this.roomRef&&this._listener)this.roomRef.off('value',this._listener);
-    this.on=false;this.host=false;this.roomRef=null;this._listener=null;
+    if(this.roomRef&&this._specListener)try{this.roomRef.child('spectators').off('value',this._specListener);}catch(e){}
+    this.on=false;this.host=false;this.roomRef=null;this._listener=null;this._specListener=null;
     this.roomCode=null;this.players=[];this.myIdx=0;this.NP=3;
   }
 };
