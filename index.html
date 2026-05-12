@@ -711,7 +711,6 @@ header{
         style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;
         border-radius:50%;border:1px solid rgba(231,76,60,.25);background:none;color:rgba(231,76,60,.6);
         cursor:pointer;font-size:14px;-webkit-tap-highlight-color:transparent;">✕</button>
-      <div class="round-chip" id="round-chip">Runde 1</div>
     </div>
   </header>
 
@@ -929,8 +928,8 @@ const MP={
               const rp=Object.values(room.players);
               rp.forEach((p,i)=>{if(p&&p.leftGame&&p.ai&&G.players&&G.players[i]&&!G.players[i].ai)G.players[i].ai=true;});
             }
-            const cur=G.currentTurn;
-            if(cur>=0&&G.players&&G.players[cur]&&!G.players[cur].ai)clearTimeout(MP._aiTimer);
+            const cur=G.currentTurn??G.currentPlayer;
+            if(cur>=0&&G.players&&G.players[cur]&&!G.players[cur].ai)clearTimeout(aiTimer);
           }
 
           if(document.getElementById('screen-game').style.display!=='block'){
