@@ -899,6 +899,7 @@ const MP={
         }
         const raw=mpFixArrays(room.gameState);
         if(!G||raw.ts>=(G.ts||0)){
+          try{
           const oldPhase=G?G.phase:null;
           G=raw;
 
@@ -982,6 +983,12 @@ const MP={
               _integrateSpectators(()=>{MP.players=G.players.map(p=>({...p}));if(MP.on)MP.push();render();MP.schedAI();});
             }
             if(G.phase==='playing')this.schedAI();
+          }
+          }catch(err){
+            console.error('Listener render error:',err);
+            // Trotzdem Game-Screen zeigen
+            document.getElementById('screen-waiting').classList.remove('active');
+            document.getElementById('screen-game').style.display='block';
           }
         }
       }
@@ -1895,7 +1902,6 @@ function renderHandOnly(){
 
 function render(){
   if(!G)return;
-  if(document.getElementById('screen-game').style.display!=='block')return; // nicht rendern wenn Spiel nicht sichtbar
   const myTurn=Number(G.currentPlayer)===ME;
   const canDraw=myTurn&&!G.mustDiscard&&G.phase==='playing'&&(G.hands[ME]||[]).length<HS+1;
   const goOut=G.phase==='goOutDiscard';
