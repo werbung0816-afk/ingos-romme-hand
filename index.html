@@ -2242,11 +2242,9 @@ async function mpConnect(){
 async function mpConnect_asHost(name,db){
   MP.myName=name;MP.host=true;MP.myIdx=0;MP.NP=lbCount;NP=lbCount;ME=0;
   MP.spectator=false;
-  const used=[name.toLowerCase()];
-  const pool=AI_POOL.filter(n=>!used.includes(n.toLowerCase()));
   const players=[{name,ai:false}];
   for(let i=1;i<lbCount;i++)
-    players[i]={name:pool[(i-1)%pool.length],ai:true};
+    players[i]={name:'',ai:false,empty:true}; // leer lassen — KI erst beim Start
   MP.players=players;
   await MP.roomRef.set({status:'waiting',NP:lbCount,players,hostName:name,spectators:{},ts:Date.now()});
   MP.roomRef.onDisconnect().remove();
