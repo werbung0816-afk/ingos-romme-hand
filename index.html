@@ -1894,13 +1894,14 @@ function renderHandOnly(){
 
 function render(){
   if(!G)return;
+  if(document.getElementById('screen-game').style.display!=='block')return; // nicht rendern wenn Spiel nicht sichtbar
   const myTurn=Number(G.currentPlayer)===ME;
   const canDraw=myTurn&&!G.mustDiscard&&G.phase==='playing'&&(G.hands[ME]||[]).length<HS+1;
   const goOut=G.phase==='goOutDiscard';
 
   // Status
   const dot=document.getElementById('s-dot');
-  dot.className='s-dot'+(myTurn&&!goOut?' my':goOut?' go':'');
+  if(dot)dot.className='s-dot'+(myTurn&&!goOut?' my':goOut?' go':'');
   var _smEl=document.getElementById('status-msg');
   if(_smEl) _smEl.textContent=G.message||'';
   // Round
@@ -1908,7 +1909,7 @@ function render(){
 
   // Scores
   const scoresEl=document.getElementById('scores');
-  scoresEl.innerHTML='';
+  if(scoresEl){scoresEl.innerHTML='';
   for(let i=0;i<NP;i++){
     if(G.eliminated.includes(i))continue;
     const active=G.currentPlayer===i&&G.phase==='playing';
@@ -1922,11 +1923,11 @@ function render(){
       <div class="bar"><div class="bar-fill${pct>=100?' danger':''}" style="width:${pct}%"></div></div>
       <div class="sc-sub">${G.scores[i]} / ${MAX}</div>`;
     scoresEl.appendChild(div);
-  }
+  }}
 
   // Opponents
   const oppsEl=document.getElementById('opps');
-  oppsEl.innerHTML='';
+  if(oppsEl){oppsEl.innerHTML='';
   const oppList=[];for(let i=0;i<NP;i++){if(i!==ME)oppList.push(i);}
   for(const p of oppList.slice(0,3)){
     const div=document.createElement('div');div.className='opp';
@@ -1938,26 +1939,25 @@ function render(){
       </div>
       <div class="opp-cards">${(G.hands[p]||[]).map((_,i)=>`<div class="bcard" style="animation-delay:${i*30}ms"><div class="bcard-inner"></div></div>`).join('')}</div>`;
     oppsEl.appendChild(div);
-  }
+  }}
 
   // Draw pile
   const drawBtn=document.getElementById('btn-draw');
-  drawBtn.disabled=!canDraw;
-  drawBtn.style.opacity=canDraw?'1':'0.5';
-  document.getElementById('deck-stack').innerHTML=renderDeckStack(G.drawPile.length);
+  if(drawBtn){drawBtn.disabled=!canDraw;drawBtn.style.opacity=canDraw?'1':'0.5';}
+  const deckStack=document.getElementById('deck-stack');
+  if(deckStack)deckStack.innerHTML=renderDeckStack(G.drawPile.length);
 
   // Discard pile
   const discBtn=document.getElementById('btn-draw-disc');
-  discBtn.disabled=!canDraw||!G.discardPile.length;
-  discBtn.style.opacity=(canDraw&&G.discardPile.length)?'1':'0.5';
+  if(discBtn){discBtn.disabled=!canDraw||!G.discardPile.length;discBtn.style.opacity=(canDraw&&G.discardPile.length)?'1':'0.5';}
   const discTop=document.getElementById('disc-top');
   const topCard=G.discardPile[G.discardPile.length-1];
-  discTop.innerHTML=topCard?renderCard(topCard,'md'):`<div class="empty-pile">○</div>`;
+  if(discTop)discTop.innerHTML=topCard?renderCard(topCard,'md'):`<div class="empty-pile">○</div>`;
 
   // FERTIG button
   const fertigBtn=document.getElementById('btn-fertig');
   const showFertig=Number(G.currentPlayer)===ME&&G.mustDiscard&&G.phase==='playing';
-  fertigBtn.className='fertig-btn'+(showFertig?' visible':'');
+  if(fertigBtn)fertigBtn.className='fertig-btn'+(showFertig?' visible':'');
 
   // Go-out hint
   const goHint=document.getElementById('go-hint');
