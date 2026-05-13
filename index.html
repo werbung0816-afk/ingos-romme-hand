@@ -850,8 +850,8 @@ const MP={
         // Update players cache even in waiting state
         if(room.players){
           this.NP=room.NP||this.NP; NP=this.NP;
-          this.players=[];
-          for(let i=0;i<this.NP;i++) this.players[i]=room.players[i]||{name:'',ai:false,empty:true};
+          this.players=fixArr(room.players);
+          while(this.players.length<this.NP)this.players.push({name:'',ai:false,empty:true});
         }
         mpRenderWaiting(room);return;
       }
@@ -861,10 +861,9 @@ const MP={
         NP=np;MP.NP=np;MP.on=true;
         // players aus Firebase lesen und normalisieren
         if(room.players){
-          const rp=room.players;
+          const rp=fixArr(room.players);
           MP.players=[];
           for(let i=0;i<np;i++){
-            // rp[i] kann undefined sein wenn Firebase Array→Object konvertiert hat
             MP.players[i]=rp[i]||{name:'',ai:false};
           }
           // Für Nicht-Host: myIdx und ME aktualisieren
