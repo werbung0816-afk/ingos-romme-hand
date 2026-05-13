@@ -881,18 +881,6 @@ const MP={
           // Fix Firebase array->object conversion
           G=mpFixArrays(raw);
 
-          // Zuschauer-Promotion: bin ich jetzt als Spieler eingetragen?
-          if(MP.spectator&&MP.myName&&G.playerNames){
-            const newIdx=G.playerNames.findIndex((n,i)=>n===MP.myName&&MP.players[i]&&!MP.players[i].ai);
-            if(newIdx>=0){
-              MP.spectator=false;MP.myIdx=newIdx;ME=newIdx;
-              if(MP._specRef)try{MP._specRef.remove();}catch(e){}
-              const c=document.getElementById('spectator-controls');if(c)c.style.display='none';
-              const b=document.getElementById('spectator-badge');if(b)b.remove();
-              handOrder=null;const ce2=document.getElementById('hand-cards');if(ce2)ce2._dealt=false;
-            }
-          }
-
           if(document.getElementById('screen-game').style.display!=='block'){
             document.getElementById('screen-waiting').classList.remove('active');
           initGameChat();
@@ -2310,6 +2298,14 @@ async function spectatorWantPlay(){
   try{
     await MP._specRef.update({wantToPlay:true});
     if(btn){btn.disabled=true;btn.textContent='\u23F3 Warte auf \u00DCbernahme\u2026';}
+    // Sobald der Host den Eintrag löscht → Übernahme fertig → Controls ausblenden
+    MP._specRef.on('value',snap=>{
+      if(!snap.val()){
+        MP._specRef.off();
+        const c=document.getElementById('spectator-controls');if(c)c.style.display='none';
+        MP.spectator=false;
+      }
+    });
   }catch(e){}
 }
 
